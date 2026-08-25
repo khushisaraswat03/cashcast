@@ -1,0 +1,42 @@
+# Versions are pinned so the environment does not shift mid-project.
+
+# --- needed now ---
+
+pytest==9.1.1
+# Every module has tests. Run them with `pytest` from the repo root.
+
+pydantic==2.13.4
+# Two jobs. It defines the shape of an event (sale, payment, refund,
+# chargeback, outflow, promotion) and validates the CSVs when the forecaster
+# reads them back, so a missing or malformed column fails immediately instead
+# of becoming a silently wrong number. Later it also types the agent's output.
+
+
+# --- needed for the agent, near the end of the build ---
+
+anthropic==1.0.0
+# The agent that decides what to investigate and explains the forecast.
+# It never does arithmetic.
+
+python-dotenv==1.2.3
+# Reads ANTHROPIC_API_KEY out of a local .env file, which is gitignored.
+# Never put the key in code.
+
+
+# --- deliberately not used ---
+#
+# pandas       Not needed. The whole dataset is ~1,200 sales and ~854 forecasts,
+#              which plain Python handles without help. More importantly, every
+#              amount here is an integer number of paise, and a single missing
+#              value in a pandas int column silently promotes the whole column
+#              to float64 -- which is exactly the class of bug this project
+#              claims to avoid. Averages and percentiles come from the stdlib
+#              `statistics` module.
+#
+# numpy        Same reason. Nothing here needs arrays.
+#
+# scikit-learn No model is trained. The forecast is averages, ratios and
+#              percentiles computed fresh from history each time.
+#
+# matplotlib   The report is a table. Add it only if a chart is wanted for the
+#              demo, and note that it is presentation, not measurement.

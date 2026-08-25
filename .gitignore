@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.env
+
+# Generated datasets and eval output. Reproducible from a seed, so there is no
+# reason to commit them -- except one small sample so the repo is readable without
+# running anything.
+data/
+!data/sample/
+out/
+*.db
+*.sqlite3
