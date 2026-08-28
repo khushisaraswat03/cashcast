@@ -14,12 +14,19 @@ pydantic==2.13.4
 
 # --- needed for the agent, near the end of the build ---
 
-anthropic==1.0.0
+groq==1.7.0
 # The agent that decides what to investigate and explains the forecast.
-# It never does arithmetic.
+# It never does arithmetic -- a guardrail checks every number in its answer
+# against the tool output it was given, and rejects the answer if a number
+# appears that the tools never produced.
+#
+# Groq is used on its free tier. The model is reached through a thin seam so
+# the provider is a one-file change: the agent is developed against a stub
+# that returns canned tool calls, which is also the only way to have tests for
+# it -- tests that hit a live API are tests you stop running.
 
 python-dotenv==1.2.3
-# Reads ANTHROPIC_API_KEY out of a local .env file, which is gitignored.
+# Reads GROQ_API_KEY out of a local .env file, which is gitignored.
 # Never put the key in code.
 
 
