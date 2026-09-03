@@ -1,0 +1,10 @@
+[project]
+name = "cashcast"
+version = "0.1.0"
+description = "Forecasts a merchant's bank balance 14 days out, separates what's certain from what's estimated, and measures how often it's wrong"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+filterwarnings = ["error::DeprecationWarning:src.*"]

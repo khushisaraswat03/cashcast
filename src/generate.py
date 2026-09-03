@@ -130,7 +130,19 @@ class Config:
     promo_volume_uplift: float = 3.0
     promo_discount: float = 0.30  # sale orders are 30% cheaper
     promo_declared_days_ahead: int = 15
-    merchant_expected_uplift: float = 3.0  # what the merchant *plans* for
+    # What the merchant declares, and the two halves are known very differently.
+    #
+    # The discount is a *decision*, not a forecast -- they chose 30% off, so they
+    # know it exactly, the same way they know the dates.
+    #
+    # The volume uplift is a genuine guess about how customers will respond, and
+    # promotional lift forecasts are optimistic as a rule. So the merchant plans for
+    # 3.3x and gets 3.0x. ASSUMPTION: the 10% over-estimate is plausible rather than
+    # measured, and it exists so the declared forecast improves a lot without being
+    # handed the answer -- an exactly correct plan would make declaring look better
+    # than it can ever be in practice.
+    merchant_expected_volume_uplift: float = 3.3
+    merchant_expected_discount: float = 0.30
     dip_days: int = 7  # demand pulled forward, so the week after is thin
     dip_multiplier: float = 0.80
 
@@ -289,9 +301,19 @@ class Generator:
         """One order's value. Sometimes a basket of two.
 
         During the sale, orders are discounted -- so a 3x jump in volume produces
-        roughly 2x the revenue, not 3x. That gap is deliberate: the merchant's
-        promotion says `expected_uplift = 3.0`, and a forecaster that takes the plan
-        at face value should be wrong. Plans are not outcomes.
+        roughly 2.1x the revenue, not 3x.
+
+        That gap used to be described here as "plans are not outcomes", which was
+        the wrong label for it: the merchant expects 3x volume and gets exactly 3x
+        volume, so the plan was correct. The discrepancy was entirely a unit
+        conversion the forecaster was not given enough information to do. The
+        promotion now declares volume *and* discount, so a forecaster that uses both
+        can convert properly.
+
+        Modelling genuine merchant optimism -- planning 3x and getting 2.4x -- would
+        be a separate knob and a separate finding. Deliberately not done: it would
+        change the actual sales data, and conflating optimism with a unit mismatch
+        is what caused the confusion in the first place.
         """
         points = [p for p, _ in PRICE_POINTS]
         weights = [w for _, w in PRICE_POINTS]
@@ -625,7 +647,8 @@ class Generator:
                 declared_at=datetime.combine(declared_on, time(11, 0)),
                 starts_on=cfg.promo_starts_on,
                 ends_on=cfg.promo_ends_on,
-                expected_uplift=cfg.merchant_expected_uplift,
+                expected_volume_uplift=cfg.merchant_expected_volume_uplift,
+                expected_discount=cfg.merchant_expected_discount,
             )
         )
 
@@ -868,7 +891,8 @@ class Generator:
                     else None,
                     "volume_uplift": cfg.promo_volume_uplift,
                     "discount": cfg.promo_discount,
-                    "merchant_expected_uplift": cfg.merchant_expected_uplift,
+                    "merchant_expected_volume_uplift": cfg.merchant_expected_volume_uplift,
+                    "merchant_expected_discount": cfg.merchant_expected_discount,
                 },
             },
             "counts": {

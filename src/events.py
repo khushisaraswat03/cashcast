@@ -413,10 +413,19 @@ class Promotion(Event):
     surprise. Same data, one value changed, and the difference between the two
     backtests is a measurement of what knowing is worth.
 
-    `expected_uplift` is what the *merchant believes* will happen, which is
-    deliberately not the same as what the generator actually does. A merchant who
-    plans for 3x and gets 2.4x is the normal case, and a forecaster that treats the
-    plan as fact deserves to be wrong.
+    **Two numbers, both with units in their names.** A merchant planning a sale knows
+    how much more they expect to sell *and* how much they are taking off the price,
+    because they chose the discount themselves. Both are needed, because a cash
+    forecast wants revenue and neither one gives it alone:
+
+        revenue uplift = expected_volume_uplift x (1 - expected_discount)
+
+    The field was previously a single unitless `expected_uplift`. The generator set
+    it from the volume knob and the estimator read it as revenue, so declaring a
+    3x sale at 30% off over-stated income by 43% -- and because balances accumulate,
+    that error contaminated every prediction after the promotion rather than just
+    the promotion itself. Nothing failed; the number was simply the wrong quantity.
+    Hence the units in the names.
     """
 
     promotion_id: str
@@ -424,7 +433,15 @@ class Promotion(Event):
     declared_at: dt.datetime
     starts_on: dt.date
     ends_on: dt.date
-    expected_uplift: float
+    #: How many more orders the merchant expects. NOT a revenue multiplier.
+    expected_volume_uplift: float
+    #: Fraction taken off the price during the sale. 0.30 means 30% off.
+    expected_discount: float = 0.0
+
+    @property
+    def expected_revenue_uplift(self) -> float:
+        """What a cash forecast actually needs. Derived, so it cannot drift."""
+        return self.expected_volume_uplift * (1.0 - self.expected_discount)
 
     @property
     def event_id(self) -> str:
