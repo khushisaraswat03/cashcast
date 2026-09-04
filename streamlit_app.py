@@ -11,15 +11,13 @@ every widget change.
 from __future__ import annotations
 
 import os
-import statistics
 
 import altair as alt
 import streamlit as st
 
 from src.agent import GroqModel, accuracy_summary, ask
-from src.backtest import RECENT_AVERAGE, run
+from src.backtest import run
 from src.estimate import Estimator
-from src.exceptions import REMEDY, Cause
 from src.exceptions import build as build_exceptions
 from src.forecast import Flag, _intervals_up_to, forecast
 from src.generate import main as generate
@@ -51,7 +49,7 @@ st.markdown(
     """
     <style>
       #MainMenu, footer, header {visibility: hidden;}
-      .block-container {padding-top: 2.6rem; max-width: 1240px;}
+      .block-container {padding-top: 1.4rem; max-width: 1180px;}
 
       html, body, [class*="css"] {
         font-feature-settings: "ss01", "cv05";
@@ -59,22 +57,41 @@ st.markdown(
       }
       .stDataFrame, code, .tnum {font-variant-numeric: tabular-nums;}
 
-      .wordmark {
-        font-size: 4.4rem; font-weight: 660; letter-spacing: -0.055em;
-        line-height: 0.95; margin: 0; color: #F2F4F7;
+      /* Streamlit styles every <p> in its markdown container and wins on
+         specificity, so brand type is set on divs, scoped to that container,
+         and marked important. Any one of the three alone loses. */
+      [data-testid="stMarkdownContainer"] .brand {
+        font-size: 2.25rem !important; font-weight: 700 !important;
+        letter-spacing: -0.045em !important; color: #F2F4F7 !important;
+        margin: 0 0 0.2rem 0 !important; line-height: 1 !important;
       }
-      .wordmark span {color: #B98C33;}
-      .oneliner {
-        color: #F2F4F7; font-size: 1.3rem; font-weight: 420; line-height: 1.4;
-        letter-spacing: -0.015em; max-width: 34ch; margin: 1.1rem 0 0 0;
+      [data-testid="stMarkdownContainer"] .brand span {color: #B98C33 !important;}
+
+      .hero {
+        text-align: center; padding: 3.6rem 1rem 2.4rem; border-radius: 20px;
+        background: radial-gradient(120% 150% at 50% 0%,
+                    rgba(185,140,51,0.15) 0%, rgba(10,11,13,0) 60%);
       }
-      .oneliner b {color: #B98C33; font-weight: 560;}
-      .lede {
-        color: #8B929C; font-size: 0.95rem; line-height: 1.65;
-        max-width: 58ch; margin: 0;
+      .badge {
+        display: inline-block; padding: 0.4rem 0.95rem; border-radius: 999px;
+        border: 1px solid #2A2F3A; background: #14181F;
+        color: #A8AEB8; font-size: 0.78rem; letter-spacing: 0.01em;
+        margin-bottom: 1.6rem;
       }
-      .lede + .lede {margin-top: 0.85rem;}
-      .rule {border: none; border-top: 1px solid #1E222B; margin: 2.4rem 0 1.8rem 0;}
+      .badge b {color: #B98C33; font-weight: 600;}
+
+      [data-testid="stMarkdownContainer"] .headline {
+        font-size: clamp(2.3rem, 4.6vw, 3.9rem) !important;
+        font-weight: 690 !important; letter-spacing: -0.045em !important;
+        line-height: 1.06 !important; color: #F5F6F8 !important;
+        margin: 0 auto !important; max-width: 20ch;
+      }
+      [data-testid="stMarkdownContainer"] .headline .dim {color: #6B7280 !important;}
+      [data-testid="stMarkdownContainer"] .subhead {
+        color: #9AA1AB !important; font-size: 1.02rem !important;
+        line-height: 1.6 !important; font-weight: 400 !important;
+        max-width: 60ch; margin: 1.3rem auto 0 auto !important;
+      }
 
       .kpi {
         border: 1px solid #1E222B; border-radius: 10px; padding: 1rem 1.1rem;
@@ -98,8 +115,6 @@ st.markdown(
       .note {color: #6E7681; font-size: 0.82rem; line-height: 1.55; margin: 0;}
       .note b {color: #A8AEB8;}
 
-      h3 {letter-spacing: -0.025em; font-weight: 620 !important;}
-
       .flagcard {
         border-left: 2px solid #E5484D; padding: 0.15rem 0 0.15rem 0.85rem;
         margin-bottom: 0.9rem;
@@ -108,12 +123,28 @@ st.markdown(
       .flagcard b {color: #F2F4F7;}
       .flagcard .why {color: #8B929C; font-size: 0.82rem; line-height: 1.45;}
 
-      [data-baseweb="tab-list"] {gap: 2rem; border-bottom: 1px solid #1E222B;}
-      [data-baseweb="tab"] {
-        padding: 0.7rem 0 !important; font-size: 0.94rem; font-weight: 520;
+      /* Navigation is st.segmented_control, not st.tabs: it renders as real
+         buttons without help, so it stays visible even if these rules miss. */
+      [data-testid="stSegmentedControl"] {
+        display: flex; justify-content: center; margin: 0.2rem 0 1.7rem 0;
       }
-      [data-baseweb="tab-highlight"] {background-color: #B98C33 !important;}
-      [data-baseweb="tab-border"] {display: none;}
+      [data-testid="stSegmentedControl"] button {
+        padding: 0.7rem 2.2rem !important;
+        font-size: 1.05rem !important; font-weight: 620 !important;
+        letter-spacing: -0.012em;
+      }
+
+      /* "cast" slides out from behind "cash". Rendered once per session -- a
+         brand mark that re-animates on every slider drag reads as a glitch. */
+      .brand .cast {display: inline-block;}
+      .brand.intro .cast {
+        animation: castOut 720ms cubic-bezier(.16, 1, .3, 1) 120ms both;
+      }
+      @keyframes castOut {
+        0%   {transform: translateX(-1.05em) scaleX(0.55); opacity: 0;}
+        55%  {opacity: 1;}
+        100% {transform: translateX(0) scaleX(1); opacity: 1;}
+      }
     </style>
     """,
     unsafe_allow_html=True,
@@ -183,9 +214,6 @@ def kpi(label: str, value: str, foot: str, gold: bool = False) -> str:
 
 store, bt, exceptions, accuracy = load()
 rows = {r.horizon: r for r in bt.by_horizon()}
-median_balance = statistics.median(b.closing for b in store.balances)
-cal = bt.calibration()
-calibration_hit = sum(c.covered for c in cal) / sum(c.n for c in cal)
 
 
 # --------------------------------------------------------------------------
@@ -298,7 +326,7 @@ def balance_chart(f, recs: list[dict]) -> alt.LayerChart:
         layers.append(alt.Chart(td).mark_text(
             align="right" if right else "left", dx=-7 if right else 7, dy=1,
             baseline="top", color=RED, fontSize=11, fontWeight=600,
-        ).encode(x=x, y=alt.value(0), text=alt.value("tightest day")))
+        ).encode(x=x, y=alt.value(0), text=alt.value("Tightest day")))
     else:
         layers.append(line)
 
@@ -365,126 +393,115 @@ def certainty_chart(recs: list[dict]) -> alt.LayerChart:
 
 
 # --------------------------------------------------------------------------
-# Landing
+# Header and hero
 # --------------------------------------------------------------------------
 
-hero_left, hero_right = st.columns([5, 4], gap="large")
-
-with hero_left:
-    st.markdown(
-        "<p class='wordmark'>cash<span>cast</span></p>"
-        "<p class='oneliner'>Fourteen days of your bank balance — and how much "
-        "of it is <b>actually a guess</b>.</p>",
-        unsafe_allow_html=True,
-    )
-
-with hero_right:
-    st.markdown("<div style='height:1.1rem'></div>", unsafe_allow_html=True)
-    st.markdown(
-        "<p class='lede'>When a customer pays, the money does not arrive. It sits "
-        "with the payment gateway for a working day or two, lands minus fees, and "
-        "refunds are taken out of a <i>later</i> payout than the sale they undo.</p>"
-        "<p class='lede'>So a shop that sold well this week still cannot say "
-        "whether payroll clears on Friday. This answers that — and says plainly "
-        "how much of the answer is certain and how much is estimated.</p>",
-        unsafe_allow_html=True,
-    )
-
-st.markdown("<div style='height:1.8rem'></div>", unsafe_allow_html=True)
-
-k1, k2, k3, k4 = st.columns(4, gap="medium")
-k1.markdown(kpi("Error tomorrow", "₹0", "exact, every time it was tested", True),
-            unsafe_allow_html=True)
-k2.markdown(kpi("Error at 14 days", f"{rows[14].mae / median_balance:.1%}",
-                f"about {fmt_inr(rows[14].mae)} on a typical balance"),
-            unsafe_allow_html=True)
-k3.markdown(kpi("Shortfall calls", f"{bt.breach_accuracy():.0%}",
-                "correctly called, days before they happen"),
-            unsafe_allow_html=True)
-k4.markdown(kpi("Honest about itself", f"{calibration_hit:.0%}",
-                "claimed 80% confidence, delivered this"),
+intro = "" if st.session_state.get("brand_shown") else " intro"
+st.session_state["brand_shown"] = True
+st.markdown(f"<div class='brand{intro}'>cash<span class='cast'>cast</span></div>",
             unsafe_allow_html=True)
 
 st.markdown(
-    f"<p class='kpi-foot' style='margin-top:1rem'>Measured over "
-    f"<b style='color:#F2F4F7'>{len(bt.predictions)} forecasts</b> — "
-    f"{len(bt.windows)} different days to stand on, {bt.horizon} days ahead from "
-    f"each — every one scored against what actually happened.</p>"
-    f"<hr class='rule'>",
+    f"<div class='hero'>"
+    f"<div class='badge'>Settlement timing, fees and refunds "
+    f"&nbsp;·&nbsp; <b>Not just sales</b></div>"
+    f"<div class='headline'><span class='dim'>Know what&rsquo;s in the bank</span>"
+    f"<br>before it&rsquo;s there.</div>"
+    f"<div class='subhead'>cashcast projects a merchant's cash position fourteen "
+    f"days ahead — and says how much of that is already certain and how much is "
+    f"still an estimate.</div>"
+    f"</div>",
     unsafe_allow_html=True,
 )
 
 
 # --------------------------------------------------------------------------
-# Tabs
+# Navigation
 # --------------------------------------------------------------------------
 
-tab_forecast, tab_ask, tab_accuracy, tab_limits = st.tabs(
-    ["Forecast", "Ask it", "Accuracy", "Limits"]
-)
+view = st.segmented_control(
+    "View", ["Forecast", "Ask it"], default="Forecast",
+    label_visibility="collapsed",
+) or "Forecast"
 
+# The slider exists only on the Forecast view, and Streamlit drops the state of
+# any widget it did not render on a given run. So the chosen day lives in a
+# plain session key rather than a widget key -- otherwise switching to the agent
+# and back silently resets it. The agent needs the same forecast either way.
+st.session_state.setdefault("vantage", 57)
 
-with tab_forecast:
-    st.markdown("<div style='height:0.8rem'></div>", unsafe_allow_html=True)
-    st.caption("Pick a day to stand on. The forecaster sees only what the merchant "
+if view == "Forecast":
+    st.caption("Choose a day to stand on. The forecast uses only what the merchant "
                "could have known that morning.")
+    st.session_state["vantage"] = st.slider(
+        "Standing on day", 46, 106, value=st.session_state["vantage"],
+        label_visibility="collapsed")
 
-    day = st.slider("Standing on day", 46, 106, 57, label_visibility="collapsed")
-    f = forecast_for(day)
-    recs = chart_rows(f)
+f = forecast_for(st.session_state["vantage"])
+recs = chart_rows(f)
+
+if view == "Forecast":
+
+    # What a merchant opens the app to find out, not how the model scored.
+    trough = next((p for p in f.days if Flag.TROUGH in p.flags), None)
+    short_days = sum(1 for p in f.days if p.closing < f.floor)
+
+    st.markdown("<div style='height:0.6rem'></div>", unsafe_allow_html=True)
+    k1, k2, k3, k4 = st.columns(4, gap="medium")
+    k1.markdown(kpi("Balance today", fmt_inr(f.opening),
+                    f.as_of.strftime("%d %b %Y")), unsafe_allow_html=True)
+    k2.markdown(kpi("Tightest day",
+                    fmt_inr(trough.closing) if trough else "—",
+                    (f"{trough.date.strftime('%d %b')} · {trough.horizon} days away"
+                     if trough else "none in this window"), True),
+                unsafe_allow_html=True)
+    k3.markdown(kpi("Due in this window", fmt_inr(f.floor),
+                    "the largest single bill you owe"), unsafe_allow_html=True)
+    k4.markdown(kpi("Days below that", f"{short_days} of {len(f.days)}",
+                    "when the balance will not cover it"), unsafe_allow_html=True)
+
+    st.markdown("<div style='height:1.6rem'></div>", unsafe_allow_html=True)
 
     chart_col, side_col = st.columns([3, 2], gap="large")
 
     with chart_col:
         st.altair_chart(balance_chart(f, recs), width="stretch")
         st.markdown(
-            f"<p class='note'>The shaded band is where the balance lands 80% of the "
-            f"time. Dashed line is the <b>floor</b> — {fmt_inr(f.floor)}, the "
-            f"largest single bill due in this window.</p>",
+            f"<p class='note'>The shaded band is where the balance lands 80% of "
+            f"the time. The dashed line is the <b>floor</b> — {fmt_inr(f.floor)}, "
+            f"the largest single bill due in this window.</p>",
             unsafe_allow_html=True,
         )
 
-        with st.expander("Why the band gets wider"):
+        with st.expander("How the band is built"):
             st.write(
-                "Because the forecast genuinely gets worse with distance. The band "
-                "is built from this forecaster's own past errors at each horizon, "
-                "so it is a measured statement rather than a decoration. A band "
-                "that stayed narrow across a fortnight would be the dishonest one."
+                "From this forecaster's own past errors at each distance. It "
+                "widens toward day 14 because accuracy genuinely falls with "
+                "distance."
             )
             st.write(
-                "The floor is derived rather than chosen. *“Why ₹1,00,000?”* has no "
-                "good answer; *“because that is what you owe on the 12th”* does."
+                "The floor is taken from the merchant's own commitments in the "
+                "window rather than set to a round number."
             )
 
         st.markdown("<div style='height:1.4rem'></div>", unsafe_allow_html=True)
         st.altair_chart(certainty_chart(recs), width="stretch")
         st.markdown(
             "<p class='note'>How much of each day is <b>already committed</b> — "
-            "money captured and merely in transit, or a bill already raised. "
-            "Everything else is an estimate.</p>",
+            "money captured and in transit, or a bill already raised. The rest is "
+            "estimated.</p>",
             unsafe_allow_html=True,
         )
 
         with st.expander("Why most days are empty"):
             st.write(
                 f"Past the first few days there is very little the merchant "
-                f"already holds, so almost everything that far out is estimated. "
-                f"Averaged over all {len(bt.windows)} vantage points the committed "
-                f"share falls from 100% tomorrow to "
+                f"already holds. Averaged over all {len(bt.windows)} starting "
+                f"days, the committed share falls from 100% tomorrow to "
                 f"{rows[14].mean_certain_share:.0%} at fourteen days."
-            )
-            st.write(
-                "The error is allowed to rise as that share falls. That "
-                "relationship is what stops the accuracy claim being unearned."
             )
 
     with side_col:
-        st.markdown(
-            f"<div class='kpi-label'>Balance today</div>"
-            f"<div class='kpi-value tnum'>{fmt_inr(f.opening)}</div>"
-            f"<div style='height:1.6rem'></div>",
-            unsafe_allow_html=True,
-        )
         st.markdown("<div class='kpi-label'>Days worth attention</div>",
                     unsafe_allow_html=True)
         for p in f.flagged():
@@ -515,10 +532,9 @@ with tab_forecast:
             )
 
 
-with tab_ask:
-    st.markdown("<div style='height:0.8rem'></div>", unsafe_allow_html=True)
-    st.caption("The model decides what to look at and writes the sentence. "
-               "It never does the arithmetic.")
+else:
+    st.caption("Ask about the next fourteen days. The model chooses which tools to "
+               "call and writes the sentence; it never does the arithmetic.")
 
     key = groq_key()
     if not key:
@@ -559,11 +575,7 @@ with tab_ask:
                 with st.expander(
                         f"How it got there — {len(answer.tool_calls)} tool call(s)"):
                     if not answer.tool_calls:
-                        st.write(
-                            "No tools called. For a question it should refuse, "
-                            "that is the right behaviour — there is nothing to "
-                            "look up."
-                        )
+                        st.write("No tools were called.")
                     for call, out in zip(answer.tool_calls, answer.tool_outputs):
                         args = ", ".join(f"{k}={v}"
                                          for k, v in call.arguments.items())
@@ -578,155 +590,24 @@ with tab_ask:
                 "produced is <b>rejected rather than shown</b>.</p>",
                 unsafe_allow_html=True,
             )
-            st.markdown("<div style='height:1.2rem'></div>",
+            st.markdown("<div style='height:1.3rem'></div>",
                         unsafe_allow_html=True)
             st.markdown(
-                "<div class='kpi-label'>What it refuses</div>"
-                "<p class='note'>Anything beyond 14 days. Predicting a chargeback "
-                "— unpredictable in principle, not merely unpredicted. Profit and "
-                "tax, which are accrual questions when this forecasts cash.</p>"
-                "<p class='note' style='margin-top:0.7rem'><b>Refusing well is the "
-                "point</b>, not a fallback. The last two examples in the list are "
-                "there to be refused.</p>",
+                "<div class='kpi-label'>Out of scope</div>"
+                "<p class='note'>Anything beyond fourteen days. Predicting a "
+                "chargeback. Profit and tax, which are accrual questions where "
+                "this forecasts cash.</p>"
+                "<p class='note' style='margin-top:0.7rem'>The last two examples "
+                "in the list are there to be refused.</p>",
                 unsafe_allow_html=True,
             )
 
 
-with tab_accuracy:
-    st.markdown("<div style='height:0.8rem'></div>", unsafe_allow_html=True)
-    st.caption("Nothing here is claimed. Every figure was measured by forecasting "
-               "the past and checking against what happened.")
-
-    acc_left, acc_right = st.columns(2, gap="large")
-
-    with acc_left:
-        st.markdown("**Error by horizon**")
-        st.markdown(
-            "<p class='note'>Never averaged into one number. Tomorrow is nearly "
-            "free; a fortnight is mostly guesswork.</p>",
-            unsafe_allow_html=True,
-        )
-        st.dataframe(
-            [{
-                "days ahead": r.horizon,
-                "typical error": fmt_inr(r.mae),
-                "of balance": f"{r.mae / median_balance:.1%}",
-                "a rule doing no work": fmt_inr(r.baseline_mae[RECENT_AVERAGE]),
-                "committed": f"{r.mean_certain_share:.0%}",
-            } for r in bt.by_horizon()],
-            width="stretch", hide_index=True,
-        )
-        st.markdown(
-            "<p class='note'><b>A rule doing no work</b> is the average of the "
-            "last 14 balances — picked in advance as the strongest of five "
-            "trivial rules, not chosen afterwards for being easy to beat.</p>",
-            unsafe_allow_html=True,
-        )
-
-    with acc_right:
-        st.markdown("**Are the uncertainty bands honest?**")
-        st.markdown(
-            "<p class='note'>Saying “80% confident” is a checkable claim: the "
-            "truth should land inside the band about 80 times in 100.</p>",
-            unsafe_allow_html=True,
-        )
-        st.dataframe(
-            [{
-                "days ahead": c.horizon,
-                "landed inside": f"{c.hit_rate:.0%}",
-                "band width": fmt_inr(c.mean_width),
-                "verdict": c.verdict,
-            } for c in cal],
-            width="stretch", hide_index=True,
-        )
-        st.markdown(
-            "<p class='note'>The overconfident rows are reported rather than "
-            "tuned away. Bands come only from vantage points <i>before</i> the "
-            "one being forecast, so widening them after seeing the answer would "
-            "be the cheat this whole measurement exists to prevent.</p>",
-            unsafe_allow_html=True,
-        )
-
-    st.markdown("<div style='height:1.2rem'></div>", unsafe_allow_html=True)
-    with st.expander("Naming the tightest day — where a trivial rule ties it"):
-        st.write(
-            f"It names the single tightest day out of fourteen correctly "
-            f"{bt.trough_accuracy():.0%} of the time. Guessing at random would be "
-            f"7%. But a trivial *“it is the day of the biggest bill”* rule also "
-            f"gets {bt.baselines().trough_lazy:.0%} — a tie, reported as one."
-        )
-        st.write(
-            "The tightest day usually **is** the day of the biggest bill, so both "
-            "rules find it. The difference is that only the forecast knows the "
-            "**balance** on that day, which is what decides whether the bill can "
-            "actually be paid. The lazy rule names a date and nothing else."
-        )
-
-
-with tab_limits:
-    st.markdown("<div style='height:0.8rem'></div>", unsafe_allow_html=True)
-    st.caption(f"{len(exceptions.exceptions)} of {exceptions.total_predictions} "
-               f"forecasts ({exceptions.share:.0%}) were wrong by more than "
-               f"{fmt_inr(exceptions.threshold)} — past the point where the error "
-               f"stops being ordinary noise.")
-
-    st.markdown(
-        "<p class='note'>Listing bad days would be an apology. Attributing them to "
-        "causes, and saying which have a fix, is a system that knows its own "
-        "limits.</p>",
-        unsafe_allow_html=True,
-    )
-    st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
-
-    for cause, items in exceptions.by_cause().items():
-        fixable, remedy = REMEDY[cause]
-        errs = sorted(e.error for e in items)
-        with st.expander(
-            f"{'FIXABLE' if fixable else 'NOT FIXABLE'} — {cause.value} · "
-            f"{len(items)} forecasts · median error {fmt_inr(errs[len(errs) // 2])}"
-        ):
-            st.write(remedy)
-            worst = max(items, key=lambda e: e.error)
-            st.caption(
-                f"Worst: {worst.prediction.target} — off by {fmt_inr(worst.error)} "
-                f"at {worst.prediction.horizon} days out. {worst.detail}."
-            )
-
-    for cause in Cause:
-        if cause not in exceptions.by_cause():
-            with st.expander(f"NOT FIXABLE — {cause.value} · 0 forecasts"):
-                st.write(
-                    "Checked and found to explain none of the misses in this "
-                    "dataset. A cause that was looked for and not found is "
-                    "information."
-                )
-                st.caption(REMEDY[cause][1])
-
-    st.markdown("<div style='height:1.2rem'></div>", unsafe_allow_html=True)
-    with st.expander("What this deliberately does not handle"):
-        st.markdown(
-            "- **Sales-prediction skill cannot be measured here.** The sales "
-            "pattern was chosen when the generator was written, so any model that "
-            "“discovers” it is discovering a choice. What *can* be measured is "
-            "failure behaviour: whether the system notices it is wrong, "
-            "quantifies it, and attributes the cause.\n"
-            "- **Chargebacks are unpredictable in principle**, not merely "
-            "unpredicted — too rare for any realistic dataset to estimate a rate "
-            "from.\n"
-            "- **One merchant, one bank account, one currency, one gateway, one "
-            "promotion.**\n"
-            "- **Bank holidays are a placeholder list**, not the real RBI "
-            "calendar.\n"
-            "- **Fee assumptions are unverified** — 2% plus 18% GST on the fee. "
-            "The structure is what is modelled, not the rates."
-        )
-
-
-st.markdown("<hr class='rule'>", unsafe_allow_html=True)
+st.markdown("<div style='height:2.4rem'></div>", unsafe_allow_html=True)
 st.markdown(
-    "<p class='kpi-foot'>Synthetic data — 120 days of a fictional D2C fashion "
-    "merchant, as the brief specifies. "
+    "<p class='kpi-foot' style='text-align:center'>Synthetic data — 120 days of a "
+    "fictional D2C fashion merchant. "
     "<a href='https://github.com/khushisaraswat03/cashcast' "
-    "style='color:#B98C33'>Source</a></p>",
+    "style='color:#B98C33'>Source on GitHub</a></p>",
     unsafe_allow_html=True,
 )
