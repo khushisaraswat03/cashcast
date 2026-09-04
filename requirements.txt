@@ -30,6 +30,14 @@ python-dotenv==1.2.3
 # Never put the key in code.
 
 
+# --- the hosted demo only ---
+
+streamlit==1.63.0
+# streamlit_app.py, the browser view. The forecaster itself does not import it,
+# and nothing under src/ knows it exists -- `python -m src` runs on the four
+# dependencies above alone.
+
+
 # --- deliberately not used ---
 #
 # pandas       Not needed. The whole dataset is ~1,200 sales and ~854 forecasts,

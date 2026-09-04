@@ -54,9 +54,34 @@ def fmt(paise: Paise) -> str:
     return f"{paise_to_rupees(paise):.2f}"
 
 
-def fmt_inr(paise: Paise) -> str:
-    """Format paise for humans, with thousands separators. `341740` -> `3,417.40`."""
-    return f"{paise_to_rupees(paise):,.2f}"
+def _group_indian(digits: str) -> str:
+    """Indian digit grouping -- last three, then pairs. `1234567` -> `12,34,567`."""
+    if len(digits) <= 3:
+        return digits
+    head, tail = digits[:-3], digits[-3:]
+    groups = []
+    while len(head) > 2:
+        groups.insert(0, head[-2:])
+        head = head[:-2]
+    if head:
+        groups.insert(0, head)
+    return ",".join(groups + [tail])
+
+
+def fmt_inr(paise: Paise, *, exact: bool = False) -> str:
+    """Format paise for a reader. `18000000` -> `₹1,80,000`.
+
+    Whole rupees by default: paise are noise in a balance projection and a column
+    of them is harder to scan. Pass `exact=True` where the paise are the point,
+    such as a fee breakdown that has to be seen to add up.
+    """
+    rupees = paise_to_rupees(paise)
+    sign = "-" if rupees < 0 else ""
+    rupees = abs(rupees)
+    if exact:
+        whole = int(rupees)
+        return f"{sign}₹{_group_indian(str(whole))}.{f'{rupees - whole:.2f}'[2:]}"
+    return f"{sign}₹{_group_indian(str(round_half_up(rupees)))}"
 
 
 def apply_rate(base: Paise, rate: Decimal) -> Paise:

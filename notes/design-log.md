@@ -556,13 +556,10 @@ promotes the whole column to `float64` — exactly the bug class this project cl
 It would be embarrassing to have a float creep in through the convenience layer while
 `money.py` insists on exactness. The dataset is tiny; stdlib `statistics` covers it.
 
-**LLM provider: Groq**, free tier, OpenAI-compatible (the most widely documented API shape,
-so the "I'd be less useful on a non-Anthropic provider" caveat mostly evaporates). Pick a
+**LLM provider: Groq**, free tier, OpenAI-compatible — the most widely documented API
+shape, so swapping providers later is a one-file change rather than a rewrite. Pick a
 model from Groq's current list and **check it documents tool-calling support** — their
 catalog changes often.
-
-> ⚠️ `requirements.txt` still pins `anthropic` and `python-dotenv` from before this decision.
-> To be fixed when we reach `agent.py`, not before.
 
 **Build the agent against a stub first.** A fake model returning a hardcoded tool call tests
 all the plumbing — is the tool called, are the arguments right, is the answer formatted — with
