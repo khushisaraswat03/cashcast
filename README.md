@@ -1,14 +1,3 @@
----
-title: cashcast
-emoji: 📊
-colorFrom: gray
-colorTo: yellow
-sdk: streamlit
-sdk_version: 1.63.0
-app_file: streamlit_app.py
-pinned: false
----
-
 # cashcast
 
 **A 14-day cash-position forecast for a small online merchant.** It separates the
