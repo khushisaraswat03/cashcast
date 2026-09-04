@@ -51,26 +51,30 @@ st.markdown(
     """
     <style>
       #MainMenu, footer, header {visibility: hidden;}
-      .block-container {padding-top: 2.2rem; max-width: 1280px;}
+      .block-container {padding-top: 2.6rem; max-width: 1240px;}
 
       html, body, [class*="css"] {
         font-feature-settings: "ss01", "cv05";
         -webkit-font-smoothing: antialiased;
       }
-      [data-testid="stMetricValue"], .stDataFrame, code, .tnum {
-        font-variant-numeric: tabular-nums;
-      }
+      .stDataFrame, code, .tnum {font-variant-numeric: tabular-nums;}
 
       .wordmark {
-        font-size: 2.6rem; font-weight: 620; letter-spacing: -0.045em;
-        line-height: 1; margin: 0; color: #F2F4F7;
+        font-size: 4.4rem; font-weight: 660; letter-spacing: -0.055em;
+        line-height: 0.95; margin: 0; color: #F2F4F7;
       }
       .wordmark span {color: #B98C33;}
-      .tagline {
-        color: #8B929C; font-size: 0.95rem; line-height: 1.55;
-        max-width: 62ch; margin: 0.7rem 0 0 0;
+      .oneliner {
+        color: #F2F4F7; font-size: 1.3rem; font-weight: 420; line-height: 1.4;
+        letter-spacing: -0.015em; max-width: 34ch; margin: 1.1rem 0 0 0;
       }
-      .rule {border: none; border-top: 1px solid #1E222B; margin: 2.1rem 0 1.6rem 0;}
+      .oneliner b {color: #B98C33; font-weight: 560;}
+      .lede {
+        color: #8B929C; font-size: 0.95rem; line-height: 1.65;
+        max-width: 58ch; margin: 0;
+      }
+      .lede + .lede {margin-top: 0.85rem;}
+      .rule {border: none; border-top: 1px solid #1E222B; margin: 2.4rem 0 1.8rem 0;}
 
       .kpi {
         border: 1px solid #1E222B; border-radius: 10px; padding: 1rem 1.1rem;
@@ -87,14 +91,13 @@ st.markdown(
       }
       .kpi-value.gold {color: #B98C33;}
       .kpi-foot {
-        color: #6E7681; font-size: 0.76rem; margin-top: 0.5rem; line-height: 1.4;
+        color: #6E7681; font-size: 0.76rem; margin-top: 0.5rem; line-height: 1.45;
         font-variant-numeric: tabular-nums;
       }
 
-      .eyebrow {
-        color: #B98C33; font-size: 0.72rem; text-transform: uppercase;
-        letter-spacing: 0.12em; font-weight: 650; margin-bottom: 0.3rem;
-      }
+      .note {color: #6E7681; font-size: 0.82rem; line-height: 1.55; margin: 0;}
+      .note b {color: #A8AEB8;}
+
       h3 {letter-spacing: -0.025em; font-weight: 620 !important;}
 
       .flagcard {
@@ -104,6 +107,13 @@ st.markdown(
       .flagcard.calm {border-left-color: #B98C33;}
       .flagcard b {color: #F2F4F7;}
       .flagcard .why {color: #8B929C; font-size: 0.82rem; line-height: 1.45;}
+
+      [data-baseweb="tab-list"] {gap: 2rem; border-bottom: 1px solid #1E222B;}
+      [data-baseweb="tab"] {
+        padding: 0.7rem 0 !important; font-size: 0.94rem; font-weight: 520;
+      }
+      [data-baseweb="tab-highlight"] {background-color: #B98C33 !important;}
+      [data-baseweb="tab-border"] {display: none;}
     </style>
     """,
     unsafe_allow_html=True,
@@ -148,7 +158,7 @@ def forecast_for(day: int):
 
 
 def groq_key() -> str | None:
-    """Environment first (Hugging Face Spaces), then Streamlit secrets, then .env."""
+    """Environment first, then Streamlit secrets, then a local .env."""
     if os.environ.get("GROQ_API_KEY"):
         return os.environ["GROQ_API_KEY"]
     try:
@@ -355,295 +365,367 @@ def certainty_chart(recs: list[dict]) -> alt.LayerChart:
 
 
 # --------------------------------------------------------------------------
-# Header
+# Landing
 # --------------------------------------------------------------------------
 
-st.markdown(
-    "<p class='wordmark'>cash<span>cast</span></p>"
-    "<p class='tagline'>A 14-day cash-position forecast for a small online "
-    "merchant. Money does not arrive when a customer pays — it sits with the "
-    "gateway for a working day or two, arrives net of fees, and refunds come off "
-    "a <i>later</i> payout than the sale they reverse. So a shop that sold well "
-    "this week still cannot say whether payroll clears on Friday.</p>",
-    unsafe_allow_html=True,
-)
+hero_left, hero_right = st.columns([5, 4], gap="large")
 
-st.markdown("<div style='height:1.6rem'></div>", unsafe_allow_html=True)
+with hero_left:
+    st.markdown(
+        "<p class='wordmark'>cash<span>cast</span></p>"
+        "<p class='oneliner'>Fourteen days of your bank balance — and how much "
+        "of it is <b>actually a guess</b>.</p>",
+        unsafe_allow_html=True,
+    )
+
+with hero_right:
+    st.markdown("<div style='height:1.1rem'></div>", unsafe_allow_html=True)
+    st.markdown(
+        "<p class='lede'>When a customer pays, the money does not arrive. It sits "
+        "with the payment gateway for a working day or two, lands minus fees, and "
+        "refunds are taken out of a <i>later</i> payout than the sale they undo.</p>"
+        "<p class='lede'>So a shop that sold well this week still cannot say "
+        "whether payroll clears on Friday. This answers that — and says plainly "
+        "how much of the answer is certain and how much is estimated.</p>",
+        unsafe_allow_html=True,
+    )
+
+st.markdown("<div style='height:1.8rem'></div>", unsafe_allow_html=True)
 
 k1, k2, k3, k4 = st.columns(4, gap="medium")
-k1.markdown(kpi("Error tomorrow", "₹0", "exact on 61 of 61 vantage points", True),
+k1.markdown(kpi("Error tomorrow", "₹0", "exact, every time it was tested", True),
             unsafe_allow_html=True)
 k2.markdown(kpi("Error at 14 days", f"{rows[14].mae / median_balance:.1%}",
-                f"{fmt_inr(rows[14].mae)} · a rule doing no work: "
-                f"{rows[14].baseline_mae[RECENT_AVERAGE] / median_balance:.1%}"),
+                f"about {fmt_inr(rows[14].mae)} on a typical balance"),
             unsafe_allow_html=True)
 k3.markdown(kpi("Shortfall calls", f"{bt.breach_accuracy():.0%}",
-                f"always guessing the common case: "
-                f"{bt.baselines().breach_majority:.0%}"),
+                "correctly called, days before they happen"),
             unsafe_allow_html=True)
-k4.markdown(kpi("Bands honest", f"{calibration_hit:.0%}",
-                "of the truth lands inside an 80% band"),
+k4.markdown(kpi("Honest about itself", f"{calibration_hit:.0%}",
+                "claimed 80% confidence, delivered this"),
             unsafe_allow_html=True)
 
 st.markdown(
-    f"<p class='kpi-foot' style='margin-top:1rem'>{len(bt.windows)} vantage points "
-    f"× {bt.horizon} horizons = <b style='color:#F2F4F7'>{len(bt.predictions)} "
-    f"forecasts</b>, each scored against what actually happened. Every figure is "
-    f"measured, none is claimed.</p><hr class='rule'>",
+    f"<p class='kpi-foot' style='margin-top:1rem'>Measured over "
+    f"<b style='color:#F2F4F7'>{len(bt.predictions)} forecasts</b> — "
+    f"{len(bt.windows)} different days to stand on, {bt.horizon} days ahead from "
+    f"each — every one scored against what actually happened.</p>"
+    f"<hr class='rule'>",
     unsafe_allow_html=True,
 )
 
 
 # --------------------------------------------------------------------------
-# The forecast
+# Tabs
 # --------------------------------------------------------------------------
 
-st.markdown("<p class='eyebrow'>The forecast</p>", unsafe_allow_html=True)
-st.markdown("### Where the money goes over the next fortnight")
-st.caption(
-    "Pick a day to stand on. The forecaster sees only what the merchant could have "
-    "known that morning — enforced in code, and verified by deleting every later "
-    "event and checking the answer does not move."
+tab_forecast, tab_ask, tab_accuracy, tab_limits = st.tabs(
+    ["Forecast", "Ask it", "Accuracy", "Limits"]
 )
 
-day = st.slider("Standing on day", 46, 106, 57, label_visibility="collapsed",
-                help="Day 46 is the earliest with enough history; day 106 the last "
-                     "with a full 14-day window ahead.")
-f = forecast_for(day)
-recs = chart_rows(f)
 
-chart_col, side_col = st.columns([3, 2], gap="large")
+with tab_forecast:
+    st.markdown("<div style='height:0.8rem'></div>", unsafe_allow_html=True)
+    st.caption("Pick a day to stand on. The forecaster sees only what the merchant "
+               "could have known that morning.")
 
-with chart_col:
-    st.altair_chart(balance_chart(f, recs), width="stretch")
-    st.markdown(
-        f"<p class='kpi-foot'>The shaded band is where the balance lands 80% of "
-        f"the time, built from this forecaster's own past errors. It widens with "
-        f"distance because the forecast genuinely gets worse — a band that stayed "
-        f"narrow would be the dishonest one. Dashed line is the floor: "
-        f"{fmt_inr(f.floor)}, the largest single commitment due in this window. "
-        f"Derived, not chosen — “why ₹1,00,000?” has no good answer, “because that "
-        f"is what you owe on the 12th” does.</p>",
-        unsafe_allow_html=True,
-    )
-    st.markdown("<div style='height:1.2rem'></div>", unsafe_allow_html=True)
-    st.altair_chart(certainty_chart(recs), width="stretch")
-    st.markdown(
-        f"<p class='kpi-foot'>The filled part of each bar is money "
-        f"<b style='color:#F2F4F7'>already committed</b> — captured and merely in "
-        f"transit, or a bill already raised. Most of the fortnight is empty, and "
-        f"that is the honest picture: past the first few days there is very little "
-        f"the merchant already holds, so almost everything is an estimate. Averaged "
-        f"over all {len(bt.windows)} vantage points the committed share falls from "
-        f"100% tomorrow to {rows[14].mean_certain_share:.0%} at fourteen days — and "
-        f"the error is allowed to rise as it falls. That is what stops the accuracy "
-        f"claim being unearned.</p>",
-        unsafe_allow_html=True,
-    )
+    day = st.slider("Standing on day", 46, 106, 57, label_visibility="collapsed")
+    f = forecast_for(day)
+    recs = chart_rows(f)
 
-with side_col:
-    st.markdown(
-        f"<div class='kpi-label'>Balance today</div>"
-        f"<div class='kpi-value tnum'>{fmt_inr(f.opening)}</div>"
-        f"<div style='height:1.4rem'></div>",
-        unsafe_allow_html=True,
-    )
-    st.markdown("<p class='eyebrow'>Days worth attention</p>",
-                unsafe_allow_html=True)
-    for p in f.flagged():
-        names = " + ".join(sorted(x.value.replace("_", " ") for x in p.flags))
-        calm = "" if Flag.BREACH in p.flags else " calm"
+    chart_col, side_col = st.columns([3, 2], gap="large")
+
+    with chart_col:
+        st.altair_chart(balance_chart(f, recs), width="stretch")
         st.markdown(
-            f"<div class='flagcard{calm}'>"
-            f"<b>+{p.horizon} · {p.date}</b> — <span class='tnum'>"
-            f"{fmt_inr(p.closing)}</span> · {names}"
-            f"<div class='why'>{p.reason()}</div></div>",
+            f"<p class='note'>The shaded band is where the balance lands 80% of the "
+            f"time. Dashed line is the <b>floor</b> — {fmt_inr(f.floor)}, the "
+            f"largest single bill due in this window.</p>",
             unsafe_allow_html=True,
         )
-    if not f.flagged():
-        st.markdown("<p class='kpi-foot'>Nothing flagged in this window.</p>",
-                    unsafe_allow_html=True)
 
-    with st.expander("Day by day, in figures"):
+        with st.expander("Why the band gets wider"):
+            st.write(
+                "Because the forecast genuinely gets worse with distance. The band "
+                "is built from this forecaster's own past errors at each horizon, "
+                "so it is a measured statement rather than a decoration. A band "
+                "that stayed narrow across a fortnight would be the dishonest one."
+            )
+            st.write(
+                "The floor is derived rather than chosen. *“Why ₹1,00,000?”* has no "
+                "good answer; *“because that is what you owe on the 12th”* does."
+            )
+
+        st.markdown("<div style='height:1.4rem'></div>", unsafe_allow_html=True)
+        st.altair_chart(certainty_chart(recs), width="stretch")
+        st.markdown(
+            "<p class='note'>How much of each day is <b>already committed</b> — "
+            "money captured and merely in transit, or a bill already raised. "
+            "Everything else is an estimate.</p>",
+            unsafe_allow_html=True,
+        )
+
+        with st.expander("Why most days are empty"):
+            st.write(
+                f"Past the first few days there is very little the merchant "
+                f"already holds, so almost everything that far out is estimated. "
+                f"Averaged over all {len(bt.windows)} vantage points the committed "
+                f"share falls from 100% tomorrow to "
+                f"{rows[14].mean_certain_share:.0%} at fourteen days."
+            )
+            st.write(
+                "The error is allowed to rise as that share falls. That "
+                "relationship is what stops the accuracy claim being unearned."
+            )
+
+    with side_col:
+        st.markdown(
+            f"<div class='kpi-label'>Balance today</div>"
+            f"<div class='kpi-value tnum'>{fmt_inr(f.opening)}</div>"
+            f"<div style='height:1.6rem'></div>",
+            unsafe_allow_html=True,
+        )
+        st.markdown("<div class='kpi-label'>Days worth attention</div>",
+                    unsafe_allow_html=True)
+        for p in f.flagged():
+            names = " + ".join(sorted(x.value.replace("_", " ") for x in p.flags))
+            calm = "" if Flag.BREACH in p.flags else " calm"
+            st.markdown(
+                f"<div class='flagcard{calm}'>"
+                f"<b>+{p.horizon} · {p.date}</b> — <span class='tnum'>"
+                f"{fmt_inr(p.closing)}</span> · {names}"
+                f"<div class='why'>{p.reason()}</div></div>",
+                unsafe_allow_html=True,
+            )
+        if not f.flagged():
+            st.markdown("<p class='note'>Nothing flagged in this window.</p>",
+                        unsafe_allow_html=True)
+
+        with st.expander("Day by day, in figures"):
+            st.dataframe(
+                [{
+                    "day": f"+{r['horizon']}",
+                    "date": r["date"],
+                    "balance": r["money"],
+                    "80% range": r["range"],
+                    "committed": r["certain_pct"],
+                    "": r["mark"],
+                } for r in recs if r["horizon"] > 0],
+                width="stretch", hide_index=True,
+            )
+
+
+with tab_ask:
+    st.markdown("<div style='height:0.8rem'></div>", unsafe_allow_html=True)
+    st.caption("The model decides what to look at and writes the sentence. "
+               "It never does the arithmetic.")
+
+    key = groq_key()
+    if not key:
+        st.warning(
+            "No `GROQ_API_KEY` configured, so the agent is unavailable here. "
+            "Everything else on the page still works."
+        )
+    else:
+        ask_left, ask_right = st.columns([3, 2], gap="large")
+
+        with ask_left:
+            examples = [
+                "When is my tightest day over the next two weeks?",
+                "Can I pay a supplier 2,00,000 rupees in 9 days?",
+                "Why is my tightest day so low?",
+                "How much of the day 14 forecast is guesswork?",
+                "How accurate has this forecast been in the past?",
+                "What will my balance be in three months?",
+                "What was my profit last month?",
+            ]
+            picked = st.selectbox("Try one, or write your own", [""] + examples)
+            question = st.text_input("Question", value=picked,
+                                     label_visibility="collapsed",
+                                     placeholder="Ask about the next 14 days…")
+
+            if st.button("Ask", type="primary", disabled=not question.strip()):
+                with st.spinner("Thinking…"):
+                    answer = ask(question, GroqModel(DEFAULT_MODEL, key),
+                                 bind(f, accuracy), SCHEMAS)
+
+                if answer.rejected:
+                    st.error(answer.shown)
+                    with st.expander("What it tried to say"):
+                        st.write(answer.text)
+                else:
+                    st.success(answer.shown)
+
+                with st.expander(
+                        f"How it got there — {len(answer.tool_calls)} tool call(s)"):
+                    if not answer.tool_calls:
+                        st.write(
+                            "No tools called. For a question it should refuse, "
+                            "that is the right behaviour — there is nothing to "
+                            "look up."
+                        )
+                    for call, out in zip(answer.tool_calls, answer.tool_outputs):
+                        args = ", ".join(f"{k}={v}"
+                                         for k, v in call.arguments.items())
+                        st.markdown(f"**`{call.name}({args})`**")
+                        st.json(out, expanded=False)
+
+        with ask_right:
+            st.markdown(
+                "<div class='kpi-label'>The guardrail</div>"
+                "<p class='note'>Every number in the answer is checked against "
+                "what the tools returned. An answer containing a figure no tool "
+                "produced is <b>rejected rather than shown</b>.</p>",
+                unsafe_allow_html=True,
+            )
+            st.markdown("<div style='height:1.2rem'></div>",
+                        unsafe_allow_html=True)
+            st.markdown(
+                "<div class='kpi-label'>What it refuses</div>"
+                "<p class='note'>Anything beyond 14 days. Predicting a chargeback "
+                "— unpredictable in principle, not merely unpredicted. Profit and "
+                "tax, which are accrual questions when this forecasts cash.</p>"
+                "<p class='note' style='margin-top:0.7rem'><b>Refusing well is the "
+                "point</b>, not a fallback. The last two examples in the list are "
+                "there to be refused.</p>",
+                unsafe_allow_html=True,
+            )
+
+
+with tab_accuracy:
+    st.markdown("<div style='height:0.8rem'></div>", unsafe_allow_html=True)
+    st.caption("Nothing here is claimed. Every figure was measured by forecasting "
+               "the past and checking against what happened.")
+
+    acc_left, acc_right = st.columns(2, gap="large")
+
+    with acc_left:
+        st.markdown("**Error by horizon**")
+        st.markdown(
+            "<p class='note'>Never averaged into one number. Tomorrow is nearly "
+            "free; a fortnight is mostly guesswork.</p>",
+            unsafe_allow_html=True,
+        )
         st.dataframe(
             [{
-                "day": f"+{r['horizon']}",
-                "date": r["date"],
-                "balance": r["money"],
-                "80% range": r["range"],
-                "committed": r["certain_pct"],
-                "": r["mark"],
-            } for r in recs if r["horizon"] > 0],
+                "days ahead": r.horizon,
+                "typical error": fmt_inr(r.mae),
+                "of balance": f"{r.mae / median_balance:.1%}",
+                "a rule doing no work": fmt_inr(r.baseline_mae[RECENT_AVERAGE]),
+                "committed": f"{r.mean_certain_share:.0%}",
+            } for r in bt.by_horizon()],
             width="stretch", hide_index=True,
         )
-
-st.markdown("<hr class='rule'>", unsafe_allow_html=True)
-
-
-# --------------------------------------------------------------------------
-# The agent
-# --------------------------------------------------------------------------
-
-st.markdown("<p class='eyebrow'>The agent</p>", unsafe_allow_html=True)
-st.markdown("### Ask it something")
-st.caption(
-    "The model decides *what to look at* and turns the result into a sentence. It "
-    "never adds, compares or estimates anything — every number it writes is checked "
-    "against what the tools returned, and an answer containing a figure no tool "
-    "produced is rejected rather than shown."
-)
-
-key = groq_key()
-if not key:
-    st.warning(
-        "No `GROQ_API_KEY` configured, so the agent is unavailable here. Everything "
-        "else on the page still works. Set the key as a Space secret to enable it."
-    )
-else:
-    examples = [
-        "When is my tightest day over the next two weeks?",
-        "Can I pay a supplier 2,00,000 rupees in 9 days?",
-        "Why is my tightest day so low?",
-        "How much of the day 14 forecast is guesswork?",
-        "How accurate has this forecast been in the past?",
-        "What will my balance be in three months?",
-        "What was my profit last month?",
-    ]
-    picked = st.selectbox("Try one, or write your own below", [""] + examples)
-    question = st.text_input("Question", value=picked, label_visibility="collapsed",
-                             placeholder="Ask about the next 14 days…")
-
-    if st.button("Ask", type="primary", disabled=not question.strip()):
-        with st.spinner("Thinking…"):
-            answer = ask(question, GroqModel(DEFAULT_MODEL, key),
-                         bind(f, accuracy), SCHEMAS)
-
-        if answer.rejected:
-            st.error(answer.shown)
-            with st.expander("What it tried to say"):
-                st.write(answer.text)
-        else:
-            st.success(answer.shown)
-
-        with st.expander(f"How it got there — {len(answer.tool_calls)} tool call(s)"):
-            if not answer.tool_calls:
-                st.write(
-                    "No tools called. For a question it should refuse, that is the "
-                    "right behaviour — there is nothing to look up."
-                )
-            for call, out in zip(answer.tool_calls, answer.tool_outputs):
-                args = ", ".join(f"{k}={v}" for k, v in call.arguments.items())
-                st.markdown(f"**`{call.name}({args})`**")
-                st.json(out, expanded=False)
-
-    st.caption(
-        "It refuses questions beyond 14 days, requests to predict a chargeback "
-        "(unpredictable in principle, not merely unpredicted), and anything about "
-        "profit or tax — those are accrual questions and this forecasts cash. "
-        "**Refusing well is the point**, not a fallback."
-    )
-
-st.markdown("<hr class='rule'>", unsafe_allow_html=True)
-
-
-# --------------------------------------------------------------------------
-# Accuracy
-# --------------------------------------------------------------------------
-
-st.markdown("<p class='eyebrow'>Measurement</p>", unsafe_allow_html=True)
-st.markdown("### How accurate, and how that was established")
-
-acc_left, acc_right = st.columns(2, gap="large")
-
-with acc_left:
-    st.markdown("**Error by horizon**")
-    st.caption(
-        "Never pooled across horizons. Tomorrow is nearly free and a fortnight is "
-        "mostly guesswork; one averaged number would describe neither."
-    )
-    st.dataframe(
-        [{
-            "days ahead": r.horizon,
-            "typical error": fmt_inr(r.mae),
-            "of balance": f"{r.mae / median_balance:.1%}",
-            "rule doing no work": fmt_inr(r.baseline_mae[RECENT_AVERAGE]),
-            "committed": f"{r.mean_certain_share:.0%}",
-        } for r in bt.by_horizon()],
-        width="stretch", hide_index=True,
-    )
-
-with acc_right:
-    st.markdown("**Are the uncertainty bands honest?**")
-    st.caption(
-        "Saying “80% confident” is a checkable claim: the truth should land inside "
-        "the band about 80 times in 100. Bands come from the forecaster's own past "
-        "errors, and only from vantage points *before* the one being forecast."
-    )
-    st.dataframe(
-        [{
-            "days ahead": c.horizon,
-            "landed inside": f"{c.hit_rate:.0%}",
-            "band width": fmt_inr(c.mean_width),
-            "verdict": c.verdict,
-        } for c in cal],
-        width="stretch", hide_index=True,
-    )
-
-st.info(
-    f"**Worst-day calls** — names the single tightest day out of fourteen correctly "
-    f"{bt.trough_accuracy():.0%} of the time. Guessing at random would be 7%; a "
-    f"trivial “it is the day of the biggest bill” rule gets "
-    f"{bt.baselines().trough_lazy:.0%}. When it misses, it is usually pointing at a "
-    f"day within ₹6,169 of the true one."
-)
-
-st.markdown("<hr class='rule'>", unsafe_allow_html=True)
-
-
-# --------------------------------------------------------------------------
-# Exceptions
-# --------------------------------------------------------------------------
-
-st.markdown("<p class='eyebrow'>Limits</p>", unsafe_allow_html=True)
-st.markdown("### What it could not resolve")
-st.caption(
-    f"{len(exceptions.exceptions)} of {exceptions.total_predictions} forecasts "
-    f"({exceptions.share:.0%}) were wrong by more than "
-    f"{fmt_inr(exceptions.threshold)} — the point past which the error is no longer "
-    "ordinary noise. Listing bad days would be an apology; attributing them to "
-    "causes, with the fix where one exists, is a system that knows its own limits."
-)
-
-for cause, items in exceptions.by_cause().items():
-    fixable, remedy = REMEDY[cause]
-    errs = sorted(e.error for e in items)
-    with st.expander(
-        f"{'FIXABLE' if fixable else 'NOT FIXABLE'} — {cause.value} · "
-        f"{len(items)} forecasts · median error {fmt_inr(errs[len(errs) // 2])}"
-    ):
-        st.write(remedy)
-        worst = max(items, key=lambda e: e.error)
-        st.caption(
-            f"Worst: {worst.prediction.target} — off by {fmt_inr(worst.error)} at "
-            f"{worst.prediction.horizon} days out. {worst.detail}."
+        st.markdown(
+            "<p class='note'><b>A rule doing no work</b> is the average of the "
+            "last 14 balances — picked in advance as the strongest of five "
+            "trivial rules, not chosen afterwards for being easy to beat.</p>",
+            unsafe_allow_html=True,
         )
 
-for cause in Cause:
-    if cause not in exceptions.by_cause():
-        with st.expander(f"NOT FIXABLE — {cause.value} · 0 forecasts"):
-            st.write(
-                "Checked and found to explain none of the misses in this dataset. "
-                "A cause that was looked for and not found is information."
+    with acc_right:
+        st.markdown("**Are the uncertainty bands honest?**")
+        st.markdown(
+            "<p class='note'>Saying “80% confident” is a checkable claim: the "
+            "truth should land inside the band about 80 times in 100.</p>",
+            unsafe_allow_html=True,
+        )
+        st.dataframe(
+            [{
+                "days ahead": c.horizon,
+                "landed inside": f"{c.hit_rate:.0%}",
+                "band width": fmt_inr(c.mean_width),
+                "verdict": c.verdict,
+            } for c in cal],
+            width="stretch", hide_index=True,
+        )
+        st.markdown(
+            "<p class='note'>The overconfident rows are reported rather than "
+            "tuned away. Bands come only from vantage points <i>before</i> the "
+            "one being forecast, so widening them after seeing the answer would "
+            "be the cheat this whole measurement exists to prevent.</p>",
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("<div style='height:1.2rem'></div>", unsafe_allow_html=True)
+    with st.expander("Naming the tightest day — where a trivial rule ties it"):
+        st.write(
+            f"It names the single tightest day out of fourteen correctly "
+            f"{bt.trough_accuracy():.0%} of the time. Guessing at random would be "
+            f"7%. But a trivial *“it is the day of the biggest bill”* rule also "
+            f"gets {bt.baselines().trough_lazy:.0%} — a tie, reported as one."
+        )
+        st.write(
+            "The tightest day usually **is** the day of the biggest bill, so both "
+            "rules find it. The difference is that only the forecast knows the "
+            "**balance** on that day, which is what decides whether the bill can "
+            "actually be paid. The lazy rule names a date and nothing else."
+        )
+
+
+with tab_limits:
+    st.markdown("<div style='height:0.8rem'></div>", unsafe_allow_html=True)
+    st.caption(f"{len(exceptions.exceptions)} of {exceptions.total_predictions} "
+               f"forecasts ({exceptions.share:.0%}) were wrong by more than "
+               f"{fmt_inr(exceptions.threshold)} — past the point where the error "
+               f"stops being ordinary noise.")
+
+    st.markdown(
+        "<p class='note'>Listing bad days would be an apology. Attributing them to "
+        "causes, and saying which have a fix, is a system that knows its own "
+        "limits.</p>",
+        unsafe_allow_html=True,
+    )
+    st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
+
+    for cause, items in exceptions.by_cause().items():
+        fixable, remedy = REMEDY[cause]
+        errs = sorted(e.error for e in items)
+        with st.expander(
+            f"{'FIXABLE' if fixable else 'NOT FIXABLE'} — {cause.value} · "
+            f"{len(items)} forecasts · median error {fmt_inr(errs[len(errs) // 2])}"
+        ):
+            st.write(remedy)
+            worst = max(items, key=lambda e: e.error)
+            st.caption(
+                f"Worst: {worst.prediction.target} — off by {fmt_inr(worst.error)} "
+                f"at {worst.prediction.horizon} days out. {worst.detail}."
             )
-            st.caption(REMEDY[cause][1])
+
+    for cause in Cause:
+        if cause not in exceptions.by_cause():
+            with st.expander(f"NOT FIXABLE — {cause.value} · 0 forecasts"):
+                st.write(
+                    "Checked and found to explain none of the misses in this "
+                    "dataset. A cause that was looked for and not found is "
+                    "information."
+                )
+                st.caption(REMEDY[cause][1])
+
+    st.markdown("<div style='height:1.2rem'></div>", unsafe_allow_html=True)
+    with st.expander("What this deliberately does not handle"):
+        st.markdown(
+            "- **Sales-prediction skill cannot be measured here.** The sales "
+            "pattern was chosen when the generator was written, so any model that "
+            "“discovers” it is discovering a choice. What *can* be measured is "
+            "failure behaviour: whether the system notices it is wrong, "
+            "quantifies it, and attributes the cause.\n"
+            "- **Chargebacks are unpredictable in principle**, not merely "
+            "unpredicted — too rare for any realistic dataset to estimate a rate "
+            "from.\n"
+            "- **One merchant, one bank account, one currency, one gateway, one "
+            "promotion.**\n"
+            "- **Bank holidays are a placeholder list**, not the real RBI "
+            "calendar.\n"
+            "- **Fee assumptions are unverified** — 2% plus 18% GST on the fee. "
+            "The structure is what is modelled, not the rates."
+        )
+
 
 st.markdown("<hr class='rule'>", unsafe_allow_html=True)
 st.markdown(
     "<p class='kpi-foot'>Synthetic data — 120 days of a fictional D2C fashion "
-    "merchant, as the brief specifies. Sales-prediction skill cannot be measured on "
-    "data whose pattern was chosen by the generator; what can be measured, and is, "
-    "is whether the system notices when it is wrong, quantifies it, and attributes "
-    "the cause. One merchant, one bank account, one gateway, one promotion. "
+    "merchant, as the brief specifies. "
     "<a href='https://github.com/khushisaraswat03/cashcast' "
     "style='color:#B98C33'>Source</a></p>",
     unsafe_allow_html=True,
