@@ -37,6 +37,10 @@ GOLD = "#B98C33"
 RED = "#E5484D"
 TEAL = ["#17705B", "#1F8C72", "#2AA98B", "#55C7A8", "#7FD9C0"]
 SURFACE = "#121418"
+# Vega-Lite takes padding as a number or an object, but Streamlit's chart component
+# writes padding.bottom into the spec -- which throws on a number, and takes the
+# whole chart down with it. Always an object.
+PADDING = {"top": 14, "bottom": 10, "left": 10, "right": 14}
 INK = "#F2F4F7"
 MUTED = "#8B929C"
 GRID = "#232730"
@@ -299,7 +303,7 @@ def balance_chart(f, recs: list[dict]) -> alt.LayerChart:
                   .encode(x=x, y=y).transform_filter(hover))
 
     return (alt.layer(*layers)
-            .properties(height=330, background=SURFACE, padding=18)
+            .properties(height=330, background=SURFACE, padding=PADDING)
             .configure_view(strokeWidth=0))
 
 
@@ -346,7 +350,7 @@ def certainty_chart(recs: list[dict]) -> alt.LayerChart:
                          alt.Tooltip("certain_pct:N", title="already committed"),
                          alt.Tooltip("money:N", title="balance")]))
     return (alt.layer(track, bars)
-            .properties(height=150, background=SURFACE, padding=18)
+            .properties(height=150, background=SURFACE, padding=PADDING)
             .configure_view(strokeWidth=0))
 
 
