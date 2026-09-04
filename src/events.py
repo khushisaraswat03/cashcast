@@ -1,30 +1,25 @@
 """The things that happen in a merchant's world.
 
-Six event types. Every one of them answers two separate questions:
+Six event types, each answering two separate questions:
 
 * **`known_at`** -- when could the merchant first have known this existed?
 * **`cash_at`** -- when does the money actually move?
 
-Keeping those apart is the foundation of the whole forecast. A chargeback raised on
-the 12th and debited on the 15th is *knowable* from the 12th, so on the 13th it
-belongs in the certain layer even though no money has moved yet. Collapse the two
-dates into one and that information is gone -- you would be treating a known future
-outflow as an unpredictable surprise.
+That split is the foundation of the forecast. A chargeback raised on the 12th and
+debited on the 15th is knowable from the 12th, so on the 13th it belongs in the
+certain layer even though no money has moved. Collapse the dates and a known future
+outflow becomes an unpredictable surprise.
 
-Only four of the six types move cash. Orders and promotions change what you
-*expect*, not what you have. So the balance on any day is simply the sum of
-`cash_delta` across every event whose `cash_at` is that day -- no special cases, no
-per-type branching in the forecaster.
+Only four types move cash; orders and promotions change what you expect, not what you
+have. So a day's balance is the sum of `cash_delta` over events landing that day --
+no per-type branching anywhere in the forecaster.
 
-There is deliberately no `Settlement` class. A settlement is a *grouping*: the
-payments that share a settlement date, plus the refunds and chargebacks netted off
-the same day. Storing it as its own object would mean two places holding the same
-money and a standing invitation to double-count. Group when you need to explain,
-compute from the events when you need a number.
+There is deliberately no `Settlement` class. A settlement is a grouping of payments
+sharing an arrival date; storing it separately would put the same money in two places
+and invite double-counting.
 
-Known simplification: in reality a refund larger than the payout it lands on gets
-carried forward to the next one. With ~Rs.14,000 settling daily against refunds of
-Rs.500-2,000 that never binds here, so it is not modelled.
+Known simplification: a refund larger than the payout it lands on would carry forward
+to the next one. At this volume that never binds, so it is not modelled.
 """
 
 from __future__ import annotations

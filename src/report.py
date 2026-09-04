@@ -26,6 +26,7 @@ out.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Sequence
 
 from .backtest import (
@@ -196,6 +197,16 @@ def main(argv: Sequence[str] | None = None) -> int:
                         help="skip Bucket 3's bands and the calibration check")
     parser.add_argument("--skip-leak-check", action="store_true")
     args = parser.parse_args(argv)
+
+    # Generate the dataset if it is not there, rather than failing on a missing
+    # file. `data/` is not committed, so on a fresh clone this is the difference
+    # between a report and a traceback -- and someone running the accuracy report
+    # before the entry point is a reasonable thing to do.
+    if not (Path(args.data) / "balance.csv").exists():
+        print(f"No dataset in {args.data}/ -- generating 120 days first.\n")
+        from .generate import main as generate
+
+        generate(["--out", args.data, "--quiet"])
 
     store = EventStore.load(args.data)
     store.check_two_dates()

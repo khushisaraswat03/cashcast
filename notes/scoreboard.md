@@ -71,19 +71,22 @@ worth knowing. Guessing afterwards proves nothing.
 
 Recorded 29 Aug, **before Bucket 2 was written**.
 
-| | Garvita | Claude | Reasoning |
+Two predictions were recorded, arrived at by different reasoning, so that whichever
+landed closer would say something about the *method* and not just the number.
+
+| | A — interpolated | B — from the mechanism | Reasoning |
 |---|---|---|---|
-| MAE @14 | **₹137,131** | **~₹55,000** | Split the difference between Bucket 1 (₹209,914) and the do-nothing rule (₹64,348) · vs: the whole ₹209,914 *is* the missing sales, so a working estimator should remove most of it and land near the noise floor plus estimation error |
+| MAE @14 | **₹137,131** | **~₹55,000** | A: split the difference between Bucket 1 (₹209,914) and the do-nothing rule (₹64,348) · B: the whole ₹209,914 *is* the missing sales, so a working estimator should remove most of it and land near the noise floor plus estimation error |
 | Beats the do-nothing rule at 14? | no | just about | ₹137k loses to ₹64,348 · ₹55k wins narrowly |
 | MAE @7 | — | ~₹35,000 | half the horizon, less accumulated estimate |
 | worst day | — | 60–75% | the path stops falling off a cliff, so the trough lands somewhere real |
 | breach | — | roughly flat, 70–80% | already works; less bias may cost as much as it gains |
 
-**What the disagreement is about.** Garvita's number assumes Bucket 2 removes about a
-third of the gap. Claude's assumes it removes most of it, because the ₹209,914 bias
-*is* the unaccounted sales — the thing Bucket 2 is built to supply — so what should
-remain is the noise floor (₹22,328) plus however badly a four-weekday average
-estimates a growing, promotion-disrupted business.
+**What the disagreement is about.** A assumes Bucket 2 removes about a third of the
+gap. B assumes it removes most of it, because the ₹209,914 bias *is* the unaccounted
+sales — the thing Bucket 2 is built to supply — so what should remain is the noise
+floor (₹22,328) plus however badly a four-weekday average estimates a growing,
+promotion-disrupted business.
 
 Whichever is closer, something is learned:
 
@@ -96,32 +99,33 @@ Whichever is closer, something is learned:
 
 ### Result: ₹42,988
 
-**Both predictions were too high.** Garvita's by ₹94,143 (3.2x), Claude's by ₹12,011
-(1.3x). The crude estimator worked better than either of us expected.
+**Both predictions were too high.** A by ₹94,143 (3.2x), B by ₹12,011 (1.3x). The
+crude estimator worked better than either prediction expected.
 
-What each prediction got wrong:
+What each got wrong:
 
-*Garvita's* — the method was the problem more than the number. Averaging two other
-rules' scores assumes the answer lies between them, but nothing makes that true;
-they are unrelated rules, not the ends of a range. The mechanism was already
-measured (₹18,500 of missing sales per day) and reasoning from it beats interpolating
-between landmarks. **Better next time: predict the parts, not the total.** A single
-number that comes out wrong teaches nothing; a breakdown says which term was wrong.
+**A — the method was the problem more than the number.** Averaging two other rules'
+scores assumes the answer lies between them, but nothing makes that true; they are
+unrelated rules, not the ends of a range. The mechanism had already been measured
+(₹18,500 of missing sales per day) and reasoning from it beats interpolating between
+landmarks. **The lesson: predict the parts, not the total.** A single number that comes
+out wrong teaches nothing; a breakdown says which term was wrong.
 
-*Claude's* — the breakdown was ₹25,000 noise + ₹10,500 growth bias + sale week ≈
-₹55,000. The noise term was roughly right. The **growth-bias term was too big**: a
-four-weekday average lags a growing business less than estimated, because the
-same-weekday spacing means the average sits ~11 days back, not ~18. Being over on a
-named term is the point of writing the parts down — the error is diagnosable.
+**B — and here is that lesson paying off.** The breakdown was ₹25,000 noise + ₹10,500
+growth bias + sale week ≈ ₹55,000. The noise term was roughly right. The **growth-bias
+term was too big**: a four-weekday average lags a growing business less than estimated,
+because the same-weekday spacing puts the average ~11 days back, not ~18. Being wrong
+on a *named* term is the point of writing the parts down — the error is diagnosable
+rather than just an error.
 
-Neither of us predicted that **Bucket 1+2 would beat the do-nothing rule at every
-single horizon.** Bucket 1 lost from horizon 6 onward; the estimated layer wins
+Neither prediction anticipated that **Bucket 1+2 would beat the do-nothing rule at
+every single horizon.** Bucket 1 lost from horizon 6 onward; the estimated layer wins
 outright at 1 through 14.
 
 ## Finding #2 — what is knowing about a planned sale worth?
 
 The same 854 predictions, twice, identical except whether the merchant told the
-system a sale was coming. This is the answer to Garvita's objection of 24 Aug — that
+system a sale was coming. This answers the objection raised on 24 Aug — that
 a sale week we planted ourselves proves nothing about prediction. It doesn't, so this
 measures the **value of the information** instead, which is testable on any data.
 

@@ -1,32 +1,21 @@
 """Bucket 3: how wrong is this likely to be?
 
-Buckets 1 and 2 produce a number. This produces a range around it, and then checks
-that the range is honest.
+Buckets 1 and 2 produce a number. This produces a range around it, then checks the
+range is honest.
 
-**No probability theory.** The band comes from the forecaster's own past mistakes.
-Take every 3-days-ahead error it has made so far, sort them, and read off the 10th
-and 90th percentile. That is the 80% band: the middle eight tenths of how wrong it
-has actually been. If those errors ran from -Rs.4,000 to +Rs.5,000, then today's
-3-day forecast of Rs.50,000 is reported as Rs.46,000 to Rs.55,000.
+**No probability theory.** The band comes from the forecaster's own past mistakes:
+take every 3-days-ahead error made so far, sort them, read off the 10th and 90th
+percentile. Bands widen with horizon on their own, because the errors did.
 
-Bands widen with horizon on their own, because the errors did.
+**Rolling, not pooled.** At vantage point V the band uses only errors from before V.
+Computing bands from all 854 errors and applying them to the first forecast would use
+the future to calibrate the past, inflating the one number this file exists to
+produce honestly. The earliest forecasts therefore get **no band at all** rather than
+a guessed one.
 
-**Rolling, not pooled.** At vantage point V the band uses only errors from vantage
-points *before* V. Computing bands from all 854 errors and applying them to the
-first forecast would be using the future to calibrate the past -- it would quietly
-inflate the calibration score, which is the one number this file exists to produce
-honestly.
-
-That creates a chicken and egg: the earliest forecasts have no past errors to learn
-from. They get **no band at all** rather than a guessed one. Reporting a confidence
-interval before you have any evidence about your own accuracy is exactly the kind of
-false precision the rest of the project avoids.
-
-**Calibration is the point.** Saying "80% confident" is a claim, and it is checkable:
-the truth should land inside the band about 80 times in 100. Land it 55 times and the
-bands are too narrow and the forecaster is overconfident. Land it 99 times and they
-are so wide they say nothing. Almost nobody measures this, and it is about fifteen
-lines of code.
+**Calibration is the point.** "80% confident" is a checkable claim: the truth should
+land inside the band about 80 times in 100. Land it 55 times and the bands are too
+narrow; land it 99 and they are too wide to say anything.
 """
 
 from __future__ import annotations

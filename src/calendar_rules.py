@@ -1,16 +1,14 @@
 """Settlement timing: working days, cutoffs, and per-method cycles.
 
-Three separate mechanisms push a settlement later than a naive "+2 days":
+Three mechanisms push a settlement later than a naive "+2 days", and they compound:
 
-1. **Working days.** Weekends do not count, so a Thursday capture settles Monday --
-   four calendar days, not two.
-2. **Bank holidays.** Same effect, on an irregular calendar you must supply.
-3. **The daily cutoff.** A payment captured after the cutoff belongs to the *next*
-   day's batch, so two payments an hour apart can settle two days apart.
+1. **Working days** -- a Thursday capture settles Monday. Four calendar days, not two.
+2. **Bank holidays** -- same effect, on an irregular calendar you must supply.
+3. **The daily cutoff** -- a capture after it joins the next day's batch, so two
+   payments an hour apart can settle two days apart.
 
-Every constant below is an assumption, not a fact. They are gathered here, in one
-file, precisely so that replacing them with real values is a single edit rather
-than a hunt through the forecast code.
+Every constant here is an assumption, gathered in one file so replacing them with
+real values is a single edit.
 """
 
 from __future__ import annotations

@@ -1,14 +1,14 @@
 # cashcast — design log
 
-Everything decided so far, with the reasoning behind it. Written up on 28 Aug 2026 from
-the design conversation of 22–25 Aug, and extended as the build continues.
+Every decision in this project, with the reasoning behind it. Started 28 Aug 2026 and
+extended as the build continued.
 
-This is the reference document. The full verbatim conversation is in
-`../../past-chat-transcript.txt` if you ever need the long version of any section.
+This is the reference document: what was chosen, what was rejected, what was measured,
+and what broke along the way.
 
 > **How to use this.** Read it for the reasoning; write your *own* answers in
-> [your-answers.md](your-answers.md). The panel will ask why, and an answer you wrote
-> yourself is the only kind you can give under pressure.
+> [your-answers.md](your-answers.md). A decision you can defend from memory is worth
+> more than one you have to look up.
 
 ---
 

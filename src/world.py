@@ -10,24 +10,20 @@ Three things live here.
 
 **The wall itself.** `world_as_of` and `KnownWorld`.
 
-**The bank statement.** `BankBalance` is the merchant's own balance, read from
-`balance.csv`. It is deliberately *not* an `Event` -- it moves no money, it reports
-money that already moved -- but it goes through the same filter as everything else,
-so a `KnownWorld` for day 46 contains one balance figure and cannot see day 47's.
-That is how a merchant actually knows their balance: they open the banking app and
-read a number, rather than re-adding a thousand transactions.
+**The bank statement.** `BankBalance` is not an `Event` -- it reports money that
+already moved rather than moving any -- but it passes through the same filter, so a
+`KnownWorld` for day 46 holds one balance figure and cannot see day 47's. That is how
+a merchant knows their balance: they read it, rather than re-adding a thousand
+transactions.
 
-**The audit.** `EventStore.check_balance_ties` re-derives that same balance by
-summing `cash_delta` across every event that has moved money, and asserts the two
-agree. The forecaster never calls it -- it lives on the store, on the omniscient
-side of the wall. It is worth its three lines because it tests the claim the whole
-forecast rests on: that adding up what moves reproduces the balance. A single wrong
-sign on chargebacks would shift every forecast by a constant, leave every other test
-passing, and be very hard to see.
+**The audit.** `check_balance_ties` re-derives that balance by summing `cash_delta`
+and asserts the two agree. It lives on the store, on the omniscient side of the wall,
+and tests the claim the forecast rests on: that adding up what moves reproduces the
+balance. A wrong sign anywhere would shift every forecast by a constant and leave
+every other test passing.
 
-`diff_daily` exists for the leak test. It reports *which day diverged and by how
-much*, because "outputs differ" is useless at eleven at night. Today it compares two
-`KnownWorld`s; once `forecast.py` exists it compares two forecasts unchanged.
+`diff_daily` reports *which day diverged and by how much*, so a leak test failure
+names the problem.
 """
 
 from __future__ import annotations

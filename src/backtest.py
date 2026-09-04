@@ -1,30 +1,21 @@
 """Scoring the forecast against what actually happened.
 
-Stand on day 46, forecast fourteen days, then look up what the balance really was
-on each of them. Slide to day 47 and do it again. Sixty-one vantage points x
-fourteen horizons = **854 measured predictions**, every one with a known right
-answer, none of them cherry-picked.
+Stand on day 46, forecast fourteen days, look up what the balance really was. Slide
+to day 47 and repeat. 61 vantage points x 14 horizons = **854 measured predictions**,
+none cherry-picked.
 
-Results are grouped by horizon and never pooled across them. Tomorrow's forecast is
-nearly free -- the money is already in the pipe -- and a fortnight's forecast is
-mostly guesswork. Averaging the two produces a number that describes neither, and
-lets the easy end flatter the hard end. That is the unearned metric this whole file
-exists to avoid.
+Grouped by horizon and never pooled. Tomorrow's forecast is nearly free and a
+fortnight's is mostly guesswork; one averaged number would describe neither and would
+let the easy end flatter the hard end.
 
-Three things get scored, because the forecast makes three different claims:
+Three things are scored, because the forecast makes three claims: the **balance** in
+rupees, the **trough** (did it name the right worst day), and the **breach** (does the
+path fall below what is owed). Each is scored beside a **lazy baseline** -- what a
+rule with no forecasting would get. A metric a trivial heuristic already wins is not
+one to lead with, and measuring is the only way to find out.
 
-* **The balance**, in rupees, as absolute error.
-* **The trough** -- did we name the right day as the worst one?
-* **The breach** -- did we correctly say whether the path falls below what is owed?
-
-And each is scored against a **lazy baseline**: what a rule with no forecasting in
-it would get. That is a development check rather than a headline. A metric that a
-trivial heuristic already wins is a metric you should not lead with, and the only
-way to find that out is to measure it. See `Baselines`.
-
-`verify_no_leak` is the leak test in its final form. It forecasts from the full
-store and from a store with every later event physically deleted, and asserts the
-two are identical -- reporting which day diverged and by how much if not.
+`verify_no_leak` forecasts from the full store and from one with every later event
+deleted, and asserts the two are identical.
 """
 
 from __future__ import annotations
@@ -290,18 +281,14 @@ def vantage_range(
 # Baselines: what you get without forecasting anything
 # --------------------------------------------------------------------------
 #
-# Each rule sees only `history` -- the closing balances up to and including the
-# vantage day, taken from the wall-filtered statement. They cannot see settlement
-# dates, fees, bills or the event model, so "contains no forecasting" is structural
-# rather than a promise.
+# Each rule sees only the closing balances up to the vantage day, from the
+# wall-filtered statement -- no settlement dates, fees or events -- so "contains no
+# forecasting" is structural rather than a promise.
 #
-# `RECENT_AVERAGE` is the published one because it is the strongest, not the
-# first one tried. "Nothing changes" was the obvious candidate and loses to it from
-# day 4 onward; both are kept for the dev view. The trend rules are kept because
-# their failure is instructive -- extrapolating a slope through a saw-toothed
-# balance amplifies the wobble, and trend-28 is off by ~₹98,000 at a fortnight,
-# worse than doing nothing at all. Worth having measured before anyone proposes
-# "just fit a line".
+# RECENT_AVERAGE is published because it is the strongest, not the first one tried.
+# The trend rules are kept because their failure is instructive: extrapolating a
+# slope through a saw-toothed balance amplifies the wobble, and trend-28 is worse
+# than doing nothing.
 
 RECENT_AVERAGE = "recent average"
 _AVERAGE_WINDOW = 14

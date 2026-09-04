@@ -1,20 +1,14 @@
 """Money handling.
 
-One rule, enforced everywhere: **money is an integer number of paise.**
+One rule: **money is an integer number of paise.** `Decimal` appears only at the
+boundary -- parsing a CSV, formatting output -- and every internal amount, sum and
+comparison is `int`.
 
-Floats are banned for monetary values. `0.1 + 0.2 != 0.3` is a curiosity in most
-programs and a defect here, because the whole product is a claim about a number:
-that a projected balance can be trusted. `Decimal` appears only at the boundary
-(parsing a CSV, formatting for output); every internal amount, sum and comparison
-is `int` paise.
+`0.1 + 0.2 != 0.3` is a curiosity in most programs and a defect here, because the
+product is a claim that a projected balance can be trusted.
 
-Rounding is **ROUND_HALF_UP**, not Python's default banker's rounding. Financial
-convention rounds 0.5 away from zero, and `round()` does not:
-
-    >>> round(0.5), round(1.5), round(2.5)
-    (0, 2, 2)
-
-That is a defensible choice for statistics and the wrong one for an invoice.
+Rounding is ROUND_HALF_UP, not Python's banker's rounding: `round(2.5)` gives 2,
+which is defensible for statistics and wrong for an invoice.
 """
 
 from __future__ import annotations

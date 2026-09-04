@@ -1,35 +1,14 @@
-"""Bucket 2: the things that have not happened yet.
+"""Bucket 2: sales and refunds that have not happened yet.
 
-Three numbers, all measured from history, none of them a model. No weights, no
-fitting loop, no training artifact -- they are recomputed from scratch at every
-vantage point, which is what a real system does every morning.
+Three numbers measured from history and refitted at every vantage point: a weekday
+sales average, a refund rate, and an order-to-request lag distribution. Averages and
+ratios, not a model.
 
-**Sales.** Average the last four same-weekdays. Grouped by weekday because Saturday
-takes 2.3x what Tuesday does in this business, so averaging across days would leak a
-big Saturday into a Tuesday forecast.
+Refunds are the point. A refund attaches to an order that already happened, so the
+projection runs forward from orders already in the books -- you never learn which
+customer, and you do not need to.
 
-**Refunds.** The interesting one, and the reason this bucket exists. A refund is not a
-new random event -- it attaches to an order that already happened. So the projection
-runs forward from orders already in the books: measure what fraction of order value
-comes back (12.7% here) and how long it takes (a hump from 6 to 18 days, peaking
-around 8), then spread that shape forward. You never learn which customer. You do not
-need to.
-
-Deliberately crude, and that is defensible: with 120 days of data whose sales pattern
-was chosen by the generator, anything cleverer would be measuring the generator's
-random-number choices. A weekday average is auditable; a fitted model is not, and in
-finance a number nobody can explain is a number nobody can sign off.
-
-Two decisions live here, both Garvita's:
-
-* **Four weekdays, unweighted.** Not because it is best -- it lags a growing business
-  and will under-predict -- but because that bias is a finding. Measure it, fix it,
-  measure the improvement. Starting with the fix means never showing it was worth
-  anything.
-* **Predicted sales generate predicted refunds** (`refunds_from_forecast`). Predicting
-  revenue without predicting the cost attached to it is not conservative, it is
-  inconsistent -- it swaps one bias for another. Kept as a flag so the difference is
-  measured rather than argued.
+Rationale for the parameter choices is in notes/design-log.md.
 """
 
 from __future__ import annotations
@@ -49,32 +28,16 @@ DEFAULT_WEEKS = 4
 #: Order-to-cash-out lags outside this range are treated as noise rather than shape.
 MAX_REFUND_LAG = 40
 
-#: Days after a declared promotion ends that are also treated as unrepresentative.
-#:
-#: ASSUMPTION, and the honest description of it is that the *direction* is
-#: well-established -- demand pulled forward by a sale leaves the following period
-#: thin -- while this specific length is a choice. It cannot be validated here:
-#: there is one promotion per dataset, so there is nothing to fit it to.
-#:
-#: Chosen on a dataset whose dip happened to be exactly seven days, where it made
-#: the residual bias almost perfectly uniform (spread of Rs.228 between clean and
-#: polluted windows). On a held-out dataset with a fourteen-day dip that spread was
-#: Rs.2,798 -- worse than not excluding anything. So the *consistency* argument for
-#: this value was an artifact of the data it was chosen on.
-#:
-#: It is kept anyway, for a reason that did survive: on windows with no promotion
-#: nearby it excludes nothing, so the underlying growth bias passes through
-#: unchanged and stays measurable. A median baseline scores similarly on absolute
-#: error but adds its own downward bias to clean windows, which would contaminate
-#: the growth correction below.
+#: Days after a declared promotion that are also excluded from the baseline.
+#: ASSUMPTION: the direction is well established in retail, this duration is not,
+#: and one promotion per dataset gives nothing to fit it to. See design-log.
 DIP_EXCLUSION_DAYS = 7
 
 #: The four-weekday window's centre of gravity: 7, 14, 21 and 28 days back.
 BASELINE_CENTROID_DAYS = 17.5
 
-#: A measured daily growth rate outside this range is treated as a artefact of a
-#: short or disturbed history rather than a fact about the business, and the
-#: correction is skipped. Compounding a wrong growth rate over 17.5 days does more
+#: Growth outside this range is treated as an artefact of short or disturbed history
+#: and the correction is skipped. Compounding a wrong rate over 17.5 days does more
 #: damage than leaving the lag uncorrected.
 MAX_DAILY_GROWTH = 0.02
 
@@ -122,12 +85,9 @@ class Estimator:
     ) -> "Estimator":
         """Refit from what was knowable on `world.as_of`.
 
-        `promotions_visible` is the hidden-versus-declared experiment, and it is a
-        switch here rather than in the data because the wall already does the real
-        work: a promotion the merchant has not announced yet has a `declared_at`
-        after the vantage day, so `world.promotions_covering` cannot see it either
-        way. Turning this off models a merchant who declines to tell their finance
-        system about a sale they have planned.
+        `promotions_visible=False` models a merchant who does not tell their finance
+        system about a sale they have planned. It is the hidden-versus-declared
+        experiment.
         """
         sales = world.captured_sales_by_day()
         skip = _unrepresentative_days(world)
@@ -151,25 +111,13 @@ class Estimator:
     def expected_sales(self, day: dt.date) -> Paise:
         """Gross captured value expected on `day`. Zero if that weekday is unseen.
 
-        A declared promotion multiplies the weekday baseline by the uplift the
-        merchant stated. Taken at face value deliberately: they said 3x, so the
-        forecast says 3x. Damping it would mean inventing a correction factor to
-        defend, and would hide the more interesting result -- the gap between what
-        a merchant plans and what happens is itself a finding, and it only shows up
-        if the plan is used as given.
+        A declared promotion multiplies the baseline by the merchant's stated uplift,
+        taken at face value -- the gap between plan and outcome is itself a finding.
+        The uplift covers the declared window only; the dip afterwards stays a
+        surprise, because a merchant announces a sale and not its aftermath.
 
-        The uplift applies to the declared window only. A merchant announces a sale;
-        they do not announce the quiet week afterwards, so the dip stays a surprise.
-
-        **Growth correction.** The four-weekday window looks 7, 14, 21 and 28 days
-        back, so its centre of gravity sits 17.5 days in the past -- it describes a
-        smaller business than the one that exists today, and under-predicts by a
-        little, every single day. Measured at Rs.970/day, or -4.9% of a day's sales,
-        against -6.1% predicted from the growth rate and the centroid.
-
-        So the baseline is carried forward by the measured growth over that distance.
-        Both numbers are measured rather than tuned, which is why this is a
-        derivation rather than a knob.
+        The baseline is then carried forward by measured growth over the window's
+        17.5-day centroid, correcting a lag measured at -4.9% of a day's sales.
         """
         base = self.weekday_sales.get(day.weekday(), 0)
         if self.daily_growth:
@@ -205,22 +153,14 @@ class Estimator:
     def expected_refunds(
         self, day: dt.date, *, refunds_from_forecast: bool = True
     ) -> Paise:
-        """Refund value leaving the bank on `day`, in paise, as a positive number.
+        """Refund value leaving the bank on `day`, as a positive number.
 
-        Every past order carries a probability of a customer asking for money back
-        later. Sum that across all orders and you get an expected outflow -- without
-        knowing a single customer.
+        Pivots on the *request* date, not the cash date. A refund already asked for
+        is a fact the certain layer is carrying; predicting it again subtracts the
+        same money twice. Only requests that have not yet happened are estimated.
 
-        **Pivots on the request date, not the cash date.** A refund a customer has
-        already asked for is a fact, and the certain layer is already carrying it;
-        predicting it again subtracts the same money twice. So only requests that
-        have *not yet happened* are estimated -- `request_day > as_of`. Getting this
-        wrong cost horizon 1 its exactness, which is precisely the invariant that
-        exists to catch it.
-
-        With `refunds_from_forecast`, orders that have not happened yet contribute
-        too: a sale predicted for tomorrow can have its refund land inside a 14-day
-        window, and predicting revenue without the cost attached to it is not
+        `refunds_from_forecast` lets sales that have not happened yet contribute
+        their own refunds -- predicting revenue without its attached cost is not
         conservative, it is inconsistent.
         """
         if not self.lag_shape or not self.refund_rate:
@@ -249,15 +189,12 @@ class Estimator:
 def _unrepresentative_days(world: KnownWorld) -> frozenset[dt.date]:
     """Days that are not "what would have sold anyway", and so are not baseline.
 
-    A promoted day contains two things mixed together: the business the shop would
-    have done regardless, and the extra the promotion caused. Averaging it in
-    estimates the baseline from data that is not baseline -- and because a rolling
-    window is four weeks wide, one sale day distorts the estimate for a month.
+    A promoted day mixes the business the shop would have done regardless with the
+    extra the promotion caused, and a four-week rolling window carries that
+    distortion for a month.
 
-    Driven entirely by *declared* promotions, so a sale the merchant never mentioned
-    cannot be excluded. That is not a limitation to apologise for: it means declaring
-    a promotion helps twice, once by predicting the sale week and again by keeping
-    the following month's baseline clean.
+    Driven by *declared* promotions only, so declaring one helps twice: it predicts
+    the sale week and keeps the following month's baseline clean.
     """
     out: set[dt.date] = set()
     for promo in world.promotions:
@@ -275,19 +212,13 @@ def _daily_growth(
 ) -> float:
     """Compound daily growth, from the two four-week blocks before the vantage day.
 
-    Two blocks rather than a fitted line: comparing four weeks against the four
-    before it is arithmetic anyone can check, and it spans whole weeks so weekday
-    composition cancels out rather than needing to be modelled.
+    Two blocks rather than a fitted line: it is arithmetic anyone can check, and it
+    spans whole weeks so weekday composition cancels out.
 
-    Promotional days are excluded from both blocks. Leaving them in would read a
-    sale as growth and then compound that over 17.5 days -- turning a correction
-    into a much larger error than the one it was fixing.
-
-    Days before the history begins are excluded, not counted as zero. Reading them
-    as quiet trading days made the older block look far smaller than it was and the
-    growth rate enormous -- up to 1.9%/day against a true 0.26%, which compounds to
-    a +39% "correction" at the earliest vantage points. A day with no sales inside
-    the window is real information; a day before the shop existed is not.
+    Promotional days are excluded from both blocks, or a sale reads as growth and
+    gets compounded over 17.5 days. Days before the history begins are excluded
+    rather than counted as zero -- a day with no sales inside the window is real
+    information, a day before the shop existed is not.
     """
     if not sales:
         return 0.0
@@ -319,21 +250,14 @@ def _weekday_means(
 ) -> dict[int, Paise]:
     """Mean of the last `weeks` occurrences of each weekday, ending yesterday.
 
-    Days with no sales at all still count as zero -- dropping them would quietly
-    inflate every weekday average by ignoring the quiet days.
+    Quiet days count as zero; dropping them would inflate every average.
 
-    The window ends the day *before* the vantage day, never on it. Counting from
-    `as_of` gave the weekday you happen to be standing on a different sample window
-    from the other six: today plus three previous, against four previous. A
-    Wednesday forecast made on a Wednesday would then be built from partly
-    different history than the same forecast made on a Thursday, which is a
-    property of the calendar rather than of the business. Today is also, in any
-    real deployment, a day that is not over yet.
+    The window ends the day *before* the vantage day. Including today gave the
+    weekday you happen to be standing on a different sample window from the other
+    six -- a property of the calendar, not the business. Today is also not over yet.
 
-    Days in `skip` are passed over and the window reaches further back for a clean
-    replacement, so the sample size stays at `weeks`. Dropping them instead would
-    leave three samples instead of four for a month -- noisier precisely when
-    everything else is unusual too.
+    `skip` days are passed over and the window reaches further back, so the sample
+    size stays constant rather than thinning during a promotion.
     """
     buckets: dict[int, list[Paise]] = defaultdict(list)
     last = as_of - dt.timedelta(days=1)
@@ -385,19 +309,13 @@ def _lag_shape(world: KnownWorld) -> dict[int, float]:
 
 
 def _declared_uplift(world: KnownWorld, horizon_days: int) -> dict[dt.date, float]:
-    """Day -> uplift multiplier, for promotions announced on or before the vantage day.
+    """Day -> uplift multiplier, for promotions declared on or before the vantage day.
 
-    Reads through `promotions_covering`, so the wall decides visibility. Nothing here
-    knows whether a promotion exists until the merchant has declared it.
+    Uses `expected_revenue_uplift`, never the volume figure: reading volume as if it
+    were revenue over-stated a 3x sale at 30% off by 43%, and balances carried that
+    error into every day afterwards.
 
-    Uses `expected_revenue_uplift`, never the volume figure. A cash forecast needs
-    revenue, and volume x discount is the only thing that gives it -- reading the
-    volume number as if it were revenue over-stated a 3x sale at 30% off by 43%, and
-    because balances accumulate that error leaked into every day after the sale.
-
-    Overlapping promotions multiply rather than take the maximum: two independent
-    reasons for people to buy compound, and taking the larger would silently discard
-    one of them.
+    Overlapping promotions multiply rather than take the maximum.
     """
     out: dict[dt.date, float] = {}
     for offset in range(1, horizon_days + 1):

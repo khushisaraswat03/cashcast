@@ -1,33 +1,19 @@
 """The forecast: a path, not a number.
 
-The certain layer only. Start from the balance the merchant can see today, step
-forward one day at a time, and on each day add what is already known to be arriving
-and subtract what is already known to be leaving. No prediction anywhere -- every
-figure comes from an event that already exists.
+Start from the balance the merchant can see today and step forward a day at a time,
+adding what is known to arrive and subtracting what is known to leave.
 
-**This is deliberately not a forecast, and the code says so.** Card money settles in
-two working days, so only a day or two of sales is ever in flight, while rent,
-salaries and supplier bills are committed weeks ahead. The certain layer therefore
-sees two days of income against fourteen days of expenditure and trends sharply
-negative. What it honestly answers is *"what happens if I never sell anything
-again, starting now"* -- a real question, and a useful worst case, but not a
-prediction. `Forecast.scenario` names it.
+Without an estimator this is the **certain layer alone**, and that is not a forecast:
+cards settle in two working days, so only a day or two of sales is ever in flight
+while bills are committed weeks ahead. It trends sharply negative and honestly
+answers *"what if I never sell anything again"*. `Forecast.scenario` names it.
 
-Two structural choices, both to stop later work from becoming a rewrite:
+**Every day carries its receipts** -- the actual events that moved its cash, not just
+a total -- so "the 22nd is worst because the supplier bill and the tax payment landed
+together" is a read rather than a second search.
 
-**Every day carries its receipts.** A `DayProjection` holds the actual events that
-moved its cash, not just a total. That is what makes "day 57 is the trough because
-the supplier bill and the tax payment landed the same week" a read rather than a
-second search, and the merchant report promises exactly that reason.
-
-**The empty slots exist from day one.** `estimated_in`, `estimated_out`, `band_low`
-and `band_high` are here and unused. Bucket 2 fills the first two on Sunday and
-Bucket 3 the last two on Tuesday, by filling fields rather than reshaping the
-object -- so the report, the backtest and the agent are written once.
-
-Sign convention, stated once because mixing it is exactly the class of bug this
-project claims to eliminate: **inflows are positive, outflows are negative.** A day's
-net movement is a plain sum, never a subtraction.
+**Sign convention:** inflows positive, outflows negative. A day's net movement is a
+plain sum, never a subtraction.
 """
 
 from __future__ import annotations

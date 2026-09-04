@@ -2,26 +2,19 @@
 
 Three parts.
 
-**A seam.** `Model` is a protocol with one method. `StubModel` returns scripted
-tool calls and answers with no network at all; `GroqModel` talks to a real one. The
-tool layer is therefore testable in milliseconds, forever, and the provider is a
-one-file change. Tests that hit a live API are tests you stop running.
+**A seam.** `StubModel` returns scripted tool calls with no network; `GroqModel` talks
+to a real one. The tool layer is therefore testable in milliseconds, and the provider
+is a one-file change. Tests that hit a live API are tests you stop running.
 
-**A loop.** Ask, let the model call tools, feed the results back, let it call more.
-The chaining is what makes this an agent rather than a natural-language wrapper over
-five lookups: asked "can I pay Rs.2L on Thursday" it can check affordability, find
-the answer is no, and then decide by itself to look at *why* and at *when the money
-comes back* -- each call chosen because of what the last one returned.
+**A loop.** Ask, let the model call tools, feed results back, let it call more. The
+chaining is what makes this an agent rather than a wrapper over five lookups: asked
+"can I pay Rs.2L on Thursday" it can check affordability, find the answer is no, and
+then decide by itself to look at why.
 
-**A guardrail.** After the model answers, every number in its text is checked against
-the numbers the tools actually produced. Anything else is rejected.
-
-That last part is the point. "Never do arithmetic" in a prompt is a request, and open
-models follow instructions less reliably than frontier ones -- "don't compute
-anything yourself" is exactly the sort of instruction that gets quietly ignored when
-a model sees two numbers and helpfully adds them. The guardrail makes it enforcement,
-which means a weaker model cannot slip a computed figure past you, and the count of
-attempts is itself a reportable measurement.
+**A guardrail.** Every number in the answer is checked against the numbers the tools
+produced; anything else is rejected. "Never do arithmetic" in a prompt is a request,
+and it is the sort of instruction that gets quietly ignored when a model sees two
+numbers. This makes it enforcement, and the count of attempts is itself a measurement.
 """
 
 from __future__ import annotations
@@ -173,18 +166,11 @@ _NUMBER = re.compile(r"-?\d[\d,]*(?:\.\d+)?")
 #: for no benefit, since none of them can misstate a balance.
 _ALLOWED_SMALL = 100
 
-#: How far a quoted figure may sit from the tool value it claims to be.
-#:
-#: Not looseness for its own sake. On first contact with a real model both
-#: rejections were rounding, not invention: a margin of -46,619.55 written as "short
-#: by 46,620", and a balance of 153,380.45 written as "about 153,381". Neither
-#: misstates anything.
-#:
-#: 0.5% is deliberately far tighter than any arithmetic error could hide in. The
-#: failure this guards against is the model subtracting two balances -- and such a
-#: result sits tens of percent away from every tool value, not half of one. The
-#: system prompt also now asks for exact quotation, so this is the second line of
-#: defence rather than the first.
+#: How far a quoted figure may sit from the tool value it claims to be. Both
+#: rejections on first contact with a real model were rounding, not invention --
+#: "short by 46,620" for a margin of -46,619.55. 0.5% is far tighter than any
+#: arithmetic error could hide in: a subtracted balance sits tens of percent from
+#: every tool value, not half of one.
 TOLERANCE_RUPEES = 1.0
 TOLERANCE_SHARE = 0.005
 
@@ -235,20 +221,10 @@ class GuardrailResult:
 def check_numbers(answer: str, tool_outputs: Sequence[Any]) -> GuardrailResult:
     """Every number in the answer must have come from a tool.
 
-    Small integers are exempt -- "the next 14 days", "80% confident", "3 payments"
-    are English, not claims about money, and requiring them to appear in tool output
-    would reject fluent answers for nothing.
-
-    Percentages are the one real gap: a model can write "certain: 8%" from a
-    `share_already_certain` of 0.08 and that is a legitimate restatement rather than
-    an invention. Rounding to two decimals also has to be tolerated, since a model
-    writing 1,53,380.45 as "about 1,53,380" is not making anything up.
-
-    So is a sign flip. `can_i_afford` returns a `margin` of -46619.55 and the natural
-    English is "short by Rs.46,620" -- the rounded *absolute value*. The first real
-    model call rejected exactly that as an invention, which was wrong: allowing the
-    magnitude lets nothing new through, since a model still cannot produce a number
-    whose size no tool returned.
+    Three legitimate restatements are tolerated: small integers ("the next 14 days"
+    is English, not a claim about money), a share written as a percentage (0.08 as
+    "8%"), and a sign flip (a margin of -46,619.55 as "short by 46,620"). None of
+    these lets a model produce a magnitude no tool returned.
     """
     allowed: set[float] = set()
     for out in tool_outputs:
