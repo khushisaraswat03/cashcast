@@ -6,6 +6,10 @@ often it is wrong.
 
 Built for Track 04 — AI Finance Controller.
 
+**[Live demo →](https://cashcast.streamlit.app)** · **[How it is put together →](ARCHITECTURE.md)** · **[What broke along the way →](notes/design-log.md)**
+
+<sub>The demo is on Streamlit's free tier and may take a few seconds to wake. Nothing below needs it — `python -m src` runs the whole thing locally.</sub>
+
 ---
 
 ## Run it
@@ -194,5 +198,7 @@ src/
   agent.py           the loop, and the guardrail on every number
   evaluate.py        14 questions fixed in advance
 tests/               319 tests
+
+ARCHITECTURE.md      how it is put together, and why
 notes/design-log.md  what broke, and what it cost to find out
 ```

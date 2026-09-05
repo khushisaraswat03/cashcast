@@ -1,25 +1,19 @@
 """The things that happen in a merchant's world.
 
-Six event types, each answering two separate questions:
+Six event types, each carrying two dates: `known_at` (when the merchant could first
+have known) and `cash_at` (when the money moves). A chargeback raised on the 12th
+and debited on the 15th is certain from the 12th. Collapse the dates and a known
+future outflow becomes an unpredictable surprise.
 
-* **`known_at`** -- when could the merchant first have known this existed?
-* **`cash_at`** -- when does the money actually move?
+Only four types move cash -- orders and promotions change what you expect, not what
+you have -- so a day's balance is one sum over `cash_delta`, with no per-type
+branching in the forecaster.
 
-That split is the foundation of the forecast. A chargeback raised on the 12th and
-debited on the 15th is knowable from the 12th, so on the 13th it belongs in the
-certain layer even though no money has moved. Collapse the dates and a known future
-outflow becomes an unpredictable surprise.
+No `Settlement` class on purpose: a settlement is just the payments sharing an
+arrival date, and storing it separately invites double-counting.
 
-Only four types move cash; orders and promotions change what you expect, not what you
-have. So a day's balance is the sum of `cash_delta` over events landing that day --
-no per-type branching anywhere in the forecaster.
-
-There is deliberately no `Settlement` class. A settlement is a grouping of payments
-sharing an arrival date; storing it separately would put the same money in two places
-and invite double-counting.
-
-Known simplification: a refund larger than the payout it lands on would carry forward
-to the next one. At this volume that never binds, so it is not modelled.
+Known simplification: a refund larger than the payout it lands on would carry to the
+next one. At this volume it never binds.
 """
 
 from __future__ import annotations

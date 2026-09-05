@@ -1,21 +1,9 @@
-"""Bucket 3: how wrong is this likely to be?
+"""Bucket 3: a range around the forecast, and a check that the range is honest.
 
-Buckets 1 and 2 produce a number. This produces a range around it, then checks the
-range is honest.
-
-**No probability theory.** The band comes from the forecaster's own past mistakes:
-take every 3-days-ahead error made so far, sort them, read off the 10th and 90th
-percentile. Bands widen with horizon on their own, because the errors did.
-
-**Rolling, not pooled.** At vantage point V the band uses only errors from before V.
-Computing bands from all 854 errors and applying them to the first forecast would use
-the future to calibrate the past, inflating the one number this file exists to
-produce honestly. The earliest forecasts therefore get **no band at all** rather than
-a guessed one.
-
-**Calibration is the point.** "80% confident" is a checkable claim: the truth should
-land inside the band about 80 times in 100. Land it 55 times and the bands are too
-narrow; land it 99 and they are too wide to say anything.
+The band comes from the forecaster's own past errors -- take every 3-days-ahead
+error made so far, sort them, read off the 10th and 90th percentile. Rolling, not
+pooled: at vantage point V the band uses only errors from before V, so the earliest
+forecasts get no band rather than one calibrated on their own future.
 """
 
 from __future__ import annotations
@@ -25,25 +13,19 @@ from dataclasses import dataclass, field
 
 from .money import Paise
 
-#: Width of the reported band. 80% is easier to calibrate credibly than 95% and
-#: fails visibly when it is wrong -- a 95% band is breached so rarely that 61
-#: vantage points cannot tell a good one from a bad one.
+#: 80% is easier to calibrate credibly than 95%, which is breached too rarely for
+#: 61 vantage points to tell a good band from a bad one.
 DEFAULT_CONFIDENCE = 0.80
 
-#: Past vantage points needed before any band is offered. Ten gives the 10th and
-#: 90th percentile something to sit between; fewer and the band is just the two most
-#: extreme errors seen so far, which moves wildly and reads as precision that is not
-#: there.
+#: Fewer than this and the band is just the two most extreme errors seen so far.
 MIN_SAMPLES = 10
 
 
 def percentile(sorted_values: list[Paise], q: float) -> Paise:
     """Linear-interpolated percentile of an already-sorted list.
 
-    Written out rather than taken from `statistics.quantiles`, which needs at least
-    n>1 and reports slightly different conventions at the tails. At these sample
-    sizes the convention matters, and a calibration number is worth being able to
-    check by hand.
+    Written out rather than using `statistics.quantiles`, whose tail conventions
+    differ and matter at these sample sizes.
     """
     if not sorted_values:
         raise ValueError("no values")
@@ -60,10 +42,8 @@ def percentile(sorted_values: list[Paise], q: float) -> Paise:
 class RollingIntervals:
     """Bands from errors seen so far, kept per horizon.
 
-    Deliberately mutable and order-dependent: `observe` is called only after a
-    vantage point has been scored, so `band` can never see its own error. The
-    ordering *is* the honesty guarantee, which is why it is a stateful object rather
-    than a function over the whole error set.
+    Mutable and order-dependent on purpose: `observe` is called only after a
+    vantage point has been scored, so `band` can never see its own error.
     """
 
     confidence: float = DEFAULT_CONFIDENCE
@@ -84,11 +64,10 @@ class RollingIntervals:
         return len(self._errors.get(horizon, ()))
 
     def offsets(self, horizon: int) -> tuple[Paise, Paise] | None:
-        """How far below and above the forecast the band should reach.
+        """How far below and above the forecast the band reaches, or None.
 
-        Returns `None` until enough history exists. The offsets are the error
-        percentiles with the sign flipped: if the forecast has been running Rs.5,000
-        *high*, the band has to reach further *down* to cover the truth.
+        The offsets are the error percentiles with the sign flipped: a forecast
+        running high has to reach further down to cover the truth.
         """
         errs = self._errors.get(horizon, [])
         if len(errs) < self.min_samples:
@@ -101,8 +80,8 @@ class RollingIntervals:
         return None if off is None else (centre + off[0], centre + off[1])
 
     def band_fn(self):
-        """Adapter for `forecast(bands=...)`, so bands are present before flags are
-        computed rather than bolted on afterwards -- `AT_RISK` depends on them."""
+        """Adapter for `forecast(bands=...)`. AT_RISK depends on the band, so it
+        has to exist before flags are computed."""
         return lambda horizon, centre: self.band(horizon, centre)
 
 
@@ -122,17 +101,11 @@ class Calibration:
 
     @property
     def verdict(self) -> str:
-        """Plain words, because a calibration number invites the wrong reading.
-
-        Being *inside* the band more often than promised is not a better result --
-        it means the band is wider than it needs to be and is claiming less than it
-        could. Both directions are misses.
-        """
+        """Both directions are misses: a band wider than promised claims less
+        than it could."""
         if self.mean_width == 0:
-            # Horizon 1 is exact at every vantage point, so every past error is
-            # zero and the band collapses to a point -- which is then right every
-            # time. That is not an over-wide band, it is the correct answer to a
-            # question with no uncertainty in it.
+            # Horizon 1 is exact everywhere, so every past error is zero and the
+            # band collapses to a point -- correct, not over-wide.
             return "exact" if self.hit_rate == 1.0 else "point band, missed"
         gap = self.hit_rate - self.confidence
         if abs(gap) <= 0.05:

@@ -1,11 +1,8 @@
-"""cashcast — a browser view of the forecaster, its accuracy, and its agent.
+"""A browser view of the forecast and its agent.
 
-A presentation layer. Everything shown is computed by `src/`; this file adds no
-arithmetic of its own, which is the rule the agent works under too.
-
-The heavy work -- 854 backtested forecasts and the replayed error history behind
-the uncertainty bands -- is cached, because Streamlit reruns the whole script on
-every widget change.
+Presentation only -- everything shown is computed by `src/`. The backtest and the
+replayed error history behind the bands are cached, because Streamlit reruns the
+whole script on every widget change.
 """
 
 from __future__ import annotations
@@ -28,16 +25,14 @@ from src.world import EventStore, world_as_of
 DATA = "data"
 DEFAULT_MODEL = "openai/gpt-oss-120b"
 
-# Validated against the #121418 chart surface: gold and the teal ramp each pass
-# the lightness, chroma, contrast and colour-vision checks. Red is a status only
-# and never carries meaning without a label beside it.
+# Checked for contrast and colour-vision separation against the chart surface.
+# Red is a status only, and never carries meaning without a label beside it.
 GOLD = "#B98C33"
 RED = "#E5484D"
 TEAL = ["#17705B", "#1F8C72", "#2AA98B", "#55C7A8", "#7FD9C0"]
 SURFACE = "#121418"
-# Vega-Lite takes padding as a number or an object, but Streamlit's chart component
-# writes padding.bottom into the spec -- which throws on a number, and takes the
-# whole chart down with it. Always an object.
+# Must be an object: Streamlit writes padding.bottom into the spec, which throws
+# on a number and takes the whole chart down with it.
 PADDING = {"top": 14, "bottom": 10, "left": 10, "right": 14}
 INK = "#F2F4F7"
 MUTED = "#8B929C"
@@ -58,8 +53,7 @@ st.markdown(
       .stDataFrame, code, .tnum {font-variant-numeric: tabular-nums;}
 
       /* Streamlit styles every <p> in its markdown container and wins on
-         specificity, so brand type is set on divs, scoped to that container,
-         and marked important. Any one of the three alone loses. */
+         specificity. Divs, scoped, and !important -- any one alone loses. */
       [data-testid="stMarkdownContainer"] .brand {
         font-size: 2.25rem !important; font-weight: 700 !important;
         letter-spacing: -0.045em !important; color: #F2F4F7 !important;
@@ -123,8 +117,8 @@ st.markdown(
       .flagcard b {color: #F2F4F7;}
       .flagcard .why {color: #8B929C; font-size: 0.82rem; line-height: 1.45;}
 
-      /* Navigation is st.segmented_control, not st.tabs: it renders as real
-         buttons without help, so it stays visible even if these rules miss. */
+      /* st.segmented_control rather than st.tabs -- it renders as real buttons
+         without help, so it stays visible even if these rules miss. */
       [data-testid="stSegmentedControl"] {
         display: flex; justify-content: center; margin: 0.2rem 0 1.7rem 0;
       }
@@ -134,8 +128,8 @@ st.markdown(
         letter-spacing: -0.012em;
       }
 
-      /* "cast" slides out from behind "cash". Rendered once per session -- a
-         brand mark that re-animates on every slider drag reads as a glitch. */
+      /* Once per session -- a brand mark that re-animates on every slider drag
+         reads as a glitch. */
       .brand .cast {display: inline-block;}
       .brand.intro .cast {
         animation: castOut 720ms cubic-bezier(.16, 1, .3, 1) 120ms both;
@@ -424,10 +418,9 @@ view = st.segmented_control(
     label_visibility="collapsed",
 ) or "Forecast"
 
-# The slider exists only on the Forecast view, and Streamlit drops the state of
-# any widget it did not render on a given run. So the chosen day lives in a
-# plain session key rather than a widget key -- otherwise switching to the agent
-# and back silently resets it. The agent needs the same forecast either way.
+# Streamlit drops the state of any widget it did not render this run, and the
+# slider exists only on the Forecast view -- so the chosen day lives in a plain
+# session key. With a widget key, switching to the agent and back resets it.
 st.session_state.setdefault("vantage", 57)
 
 if view == "Forecast":

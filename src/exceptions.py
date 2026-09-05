@@ -1,27 +1,12 @@
 """What the forecast could not resolve, and why.
 
-The brief asks for the exceptions a system could not settle. A list of bad days is an
-apology; a list of **causes**, each with the error it accounts for and the fix where
-one exists, is a system that understands its own limits.
+A list of bad days is an apology. A list of causes, each with the error it accounts
+for and the fix where one exists, is a system that knows its own limits.
 
-So every prediction is attributed to a cause, and the causes are reported with their
-share of the damage. Four of them, and they are not equally excusable:
-
-* **A promotion nobody declared.** No average over past weeks anticipates a marketing
-  decision. Fixable, and the fix is measured: declaring it cuts sale-week error by 63%.
-* **The demand dip after a promotion.** People who would have bought later bought
-  during the sale. Fixable in principle -- the merchant could declare an expected dip
-  -- but not currently modelled.
-* **A chargeback.** Rare enough that no dataset of this size contains sample enough to
-  estimate a rate from. **Unpredictable in principle, not merely unpredicted**, and
-  saying so is different from making an excuse.
-* **Ordinary daily variation.** Sales move +/-30% day to day for no reason at all.
-  Irreducible: a forecaster that knew every rule would still be wrong by roughly this
-  much, and the noise floor puts a number on it.
-
-The distinction that matters, and the one worth stating in a write-up: **two of these
-have fixes and two do not.** A system that cannot tell the difference between a defect
-and a limit will keep trying to fix the weather.
+Every miss above the noise floor is attributed to one of four causes: a promotion
+nobody declared, the demand dip after one, a chargeback, or ordinary daily
+variation. Two have fixes and two do not, and a system that cannot tell a defect
+from a limit will keep trying to fix the weather.
 """
 
 from __future__ import annotations

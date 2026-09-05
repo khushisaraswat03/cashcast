@@ -1,18 +1,12 @@
 """Scoring the forecast against what actually happened.
 
-Stand on day 46, forecast fourteen days, look up what the balance really was. Slide
-to day 47 and repeat. 61 vantage points x 14 horizons = **854 measured predictions**,
-none cherry-picked.
+Stand on day 46, forecast fourteen days, look up the real balance. Slide to day 47
+and repeat: 61 vantage points x 14 horizons = 854 predictions, grouped by horizon
+and never pooled.
 
-Grouped by horizon and never pooled. Tomorrow's forecast is nearly free and a
-fortnight's is mostly guesswork; one averaged number would describe neither and would
-let the easy end flatter the hard end.
-
-Three things are scored, because the forecast makes three claims: the **balance** in
-rupees, the **trough** (did it name the right worst day), and the **breach** (does the
-path fall below what is owed). Each is scored beside a **lazy baseline** -- what a
-rule with no forecasting would get. A metric a trivial heuristic already wins is not
-one to lead with, and measuring is the only way to find out.
+Three claims are scored -- the balance, the trough (did it name the right worst
+day), and the breach (does the path fall below what is owed) -- each beside a lazy
+baseline. A metric a trivial heuristic already wins is not one to lead with.
 
 `verify_no_leak` forecasts from the full store and from one with every later event
 deleted, and asserts the two are identical.

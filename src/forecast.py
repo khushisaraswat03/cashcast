@@ -3,16 +3,14 @@
 Start from the balance the merchant can see today and step forward a day at a time,
 adding what is known to arrive and subtracting what is known to leave.
 
-Without an estimator this is the **certain layer alone**, and that is not a forecast:
-cards settle in two working days, so only a day or two of sales is ever in flight
-while bills are committed weeks ahead. It trends sharply negative and honestly
-answers *"what if I never sell anything again"*. `Forecast.scenario` names it.
+Without an estimator this is the certain layer alone, which trends sharply negative
+and answers "what if I never sell anything again" -- `Forecast.scenario` names it.
 
-**Every day carries its receipts** -- the actual events that moved its cash, not just
-a total -- so "the 22nd is worst because the supplier bill and the tax payment landed
-together" is a read rather than a second search.
+Every day carries its receipts, the actual events that moved its cash, so "the 22nd
+is worst because the supplier bill and the tax payment landed together" is a read
+rather than a second search.
 
-**Sign convention:** inflows positive, outflows negative. A day's net movement is a
+Sign convention: inflows positive, outflows negative. A day's net movement is a
 plain sum, never a subtraction.
 """
 

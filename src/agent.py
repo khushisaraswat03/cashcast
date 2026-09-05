@@ -1,20 +1,15 @@
-"""The agent: it decides what to look at, and explains. It never does arithmetic.
+"""The agent: it decides what to look at and explains. It never does arithmetic.
 
-Three parts.
+A seam -- `StubModel` returns scripted tool calls with no network, `GroqModel` talks
+to a real one -- so the loop is testable in milliseconds and the provider is a
+one-file change.
 
-**A seam.** `StubModel` returns scripted tool calls with no network; `GroqModel` talks
-to a real one. The tool layer is therefore testable in milliseconds, and the provider
-is a one-file change. Tests that hit a live API are tests you stop running.
+A loop: ask, let the model call tools, feed results back, let it call more. The
+chaining is what makes this an agent rather than a wrapper over five lookups.
 
-**A loop.** Ask, let the model call tools, feed results back, let it call more. The
-chaining is what makes this an agent rather than a wrapper over five lookups: asked
-"can I pay Rs.2L on Thursday" it can check affordability, find the answer is no, and
-then decide by itself to look at why.
-
-**A guardrail.** Every number in the answer is checked against the numbers the tools
-produced; anything else is rejected. "Never do arithmetic" in a prompt is a request,
-and it is the sort of instruction that gets quietly ignored when a model sees two
-numbers. This makes it enforcement, and the count of attempts is itself a measurement.
+A guardrail: every number in the answer is checked against the numbers the tools
+produced, and anything else is rejected. "Never do arithmetic" in a prompt is a
+request; this makes it enforcement.
 """
 
 from __future__ import annotations

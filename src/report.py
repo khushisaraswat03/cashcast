@@ -1,27 +1,15 @@
-"""The accuracy report: does this thing work?
+"""The accuracy report: should you believe any of this?
 
-The second of the project's two reports, and the one the submission rests on. The
-merchant report in `forecast.py` answers *"will the money be there"* for one day and
-carries no accuracy figures at all -- a controller deciding whether to pay a supplier
-has no use for them. This one answers *"should you believe any of that"* and carries
-nothing else.
+The merchant report in `forecast.py` answers "will the money be there" and carries
+no accuracy figures. This one carries nothing else.
 
-Five columns, deliberately. `Backtest` computes considerably more, because computing
-a number costs one line and cannot break, while printing it costs a column that a
-human reads and has to defend under questioning. The rest is behind `--dev`, for use
-while the thing is being built. Nothing is thrown away; little is published.
+Five published columns; `Backtest` computes considerably more, and the rest sits
+behind `--dev`. Nothing is thrown away, little is published.
 
-**Never pooled across horizons.** Tomorrow's forecast is nearly free -- the money is
-already in the pipe -- and a fortnight's is mostly guesswork. One averaged number
-would describe neither, and would let the easy end flatter the hard end. That is the
-unearned metric this file exists to avoid, so the table is fourteen rows and there is
-no total.
-
-Every metric is printed with the score of a rule that does no work. That comparison
-was fixed *before* the results were seen, and all three are printed whether they
-flatter or not. Choosing after the fact which metrics to publish is cherry-picking,
-which is precisely what the brief's *"one cherry-picked match proves nothing"* rules
-out.
+Never pooled across horizons -- one averaged number would let the easy end flatter
+the hard end, so the table is fourteen rows with no total. Every metric prints
+alongside a rule that does no work, and those baselines were fixed before the
+results were seen.
 """
 
 from __future__ import annotations

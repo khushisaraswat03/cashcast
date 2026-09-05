@@ -1,28 +1,18 @@
 """Scoring the agent against a fixed question set.
 
-Fourteen questions: seven it should answer and seven it should refuse. The list was
-fixed before any of them were run, which is the point -- choosing questions after
-seeing which ones a model does well on is the same cherry-picking the brief rules
-out, whether or not you notice you are doing it.
+Fourteen questions -- seven to answer, seven to refuse -- fixed before any were run.
+Choosing questions after seeing which ones a model handles well is cherry-picking
+whether or not you notice you are doing it.
 
-Each answer is scored on four things that a machine can check:
+Scored on four things a machine can check: did it call a sensible tool, does the
+answer contain the number the tool returned, did every figure trace back to a tool,
+and for the refusals, did it decline *and say why*. Whether the prose is any good
+stays a human job.
 
-* **tool** -- did it call a sensible tool, or answer from thin air?
-* **figure** -- does the answer contain the number the tool actually returned?
-* **guardrail** -- did every figure in it trace back to a tool?
-* **refusal** -- for the seven it should decline, did it decline *and say why*?
-
-What a machine cannot check is whether the prose is any good, so that stays a human
-job and is not scored here.
-
-The refusals are half the set on purpose. The brief's *"verification capacity, not
-generation speed, is the bottleneck"* is a statement about knowing what you cannot
-answer. A system that answers everything has not been careful, it has been lucky.
-
-Each refusal is for a *different structural reason*, which matters more than the
-count: beyond the horizon, unpredictable in principle, an accrual question the cash
-data cannot answer, a business that is not in the data, advice rather than fact, and
-a figure the tools never produced.
+The refusals are half the set on purpose, and each is for a different structural
+reason: beyond the horizon, unpredictable in principle, an accrual question the cash
+data cannot answer, a business not in the data, advice rather than fact, and a
+figure the tools never produced.
 """
 
 from __future__ import annotations

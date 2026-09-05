@@ -1,29 +1,17 @@
 """The temporal wall.
 
-The generator knows all 120 days. The forecaster must not. "I will remember not to
+The generator knows all 120 days; the forecaster must not. "I will remember not to
 look" is not a design, so the separation is structural: `world_as_of(day)` filters
-every record on `known_at <= day` and returns a `KnownWorld`, and that object is the
-only thing the forecaster is ever given. It holds no path, no directory and no
-handle on the store it came from, so there is nothing to reach through.
+every record on `known_at <= day` and returns a `KnownWorld`, which is the only
+thing the forecaster is ever given. It holds no path and no handle on the store it
+came from, so there is nothing to reach through.
 
-Three things live here.
+`BankBalance` is not an `Event` -- it reports money that already moved -- but it
+passes through the same filter, so day 46's world cannot see day 47's balance.
 
-**The wall itself.** `world_as_of` and `KnownWorld`.
-
-**The bank statement.** `BankBalance` is not an `Event` -- it reports money that
-already moved rather than moving any -- but it passes through the same filter, so a
-`KnownWorld` for day 46 holds one balance figure and cannot see day 47's. That is how
-a merchant knows their balance: they read it, rather than re-adding a thousand
-transactions.
-
-**The audit.** `check_balance_ties` re-derives that balance by summing `cash_delta`
-and asserts the two agree. It lives on the store, on the omniscient side of the wall,
-and tests the claim the forecast rests on: that adding up what moves reproduces the
-balance. A wrong sign anywhere would shift every forecast by a constant and leave
+`check_balance_ties` re-derives that balance by summing `cash_delta` and asserts the
+two agree. A wrong sign anywhere would shift every forecast by a constant and leave
 every other test passing.
-
-`diff_daily` reports *which day diverged and by how much*, so a leak test failure
-names the problem.
 """
 
 from __future__ import annotations

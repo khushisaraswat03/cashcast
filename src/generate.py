@@ -1,28 +1,15 @@
-"""The data generator -- part 1: sales, payments, and the actual daily balance.
+"""The data generator: 120 days of history for one imaginary D2C fashion business.
 
-Builds 120 days of history for one imaginary D2C fashion business. Everything is
-seeded, so the same seed produces byte-identical output and a bug found today can
-be reproduced tomorrow.
+Seeded, so the same seed produces byte-identical output. This generator is
+omniscient -- it knows the sale week that has not happened yet and the noise on
+every future day. Keeping it away from the forecaster is what `world.py` is for.
 
-This generator is **omniscient**. It knows the whole window, including the sale week
-that has not happened yet and the noise on every future day. The forecaster must
-never see any of that -- which is what `world.py` is for. Keeping the two apart is
-the difference between a measurement and a rehearsal.
+Writes orders, payments and the actual daily balance (the ground truth); refunds,
+chargebacks, outflows and promotions are filled in by part 2.
 
-Part 1 (this file) produces:
-
-    orders.csv      what customers bought, and when
-    payments.csv    the money, its fee breakdown, and when it settles
-    balance.csv     the actual closing balance each day -- the ground truth
-
-Refunds, chargebacks, outflows and promotions are written as empty files and filled
-in by part 2.
-
-One thing measured rather than assumed: the config asks for ~25% day-to-day noise,
-but what you *get* depends on how order counts and order values interact. The
-summary reports the noise that actually materialised, because that number sets a
-floor on how accurate any forecaster can possibly be -- and a floor you assumed is
-not a floor you can quote.
+The summary reports the day-to-day noise that actually materialised rather than the
+~25% the config asked for, because that number sets a floor on how accurate any
+forecaster can be -- and a floor you assumed is not a floor you can quote.
 
     python -m src.generate --out data --seed 7
 """
